@@ -87,7 +87,7 @@ function wpls_render_sources_table( $attributes, $content ) {
     $allowed_tags  = ['h2', 'h3', 'h4', 'h5', 'h6', 'p', 'div'];
     $heading_tag   = in_array($attributes['headingTag'], $allowed_tags) ? $attributes['headingTag'] : 'h3';
     
-    $table_style_class = ($attributes['tableStyle'] === 'stripes') ? 'is-style-stripes' : '';
+    $table_style_class = ( !empty($attributes['className']) && strpos( $attributes['className'], 'is-style-stripes' ) !== false ) ? 'is-style-stripes' : '';
 
     $wrapper_classes = [ 'wp-block-table', 'wp-block-sources-table' ];
     if ( ! empty( $attributes['align'] ) ) $wrapper_classes[] = 'align' . $attributes['align'];
