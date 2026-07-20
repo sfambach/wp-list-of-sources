@@ -18,17 +18,17 @@ function wpls_load_textdomain() {
 add_action( 'plugins_loaded', 'wpls_load_textdomain' );
 
 function wpls_register_sources_blocks() {
-    register_block_type( 'wpls/sources-table', [
+   register_block_type( 'wpls/sources-table', [
         'editor_script'   => 'wpls-blocks-js',
         'render_callback' => 'wpls_render_sources_table',
         'attributes'      => [
-            'titleSources' => [ 'type' => 'string', 'default' => 'Quellen' ],
-            'titleImages'  => [ 'type' => 'string', 'default' => 'Bilder' ],
-            'titleTables'  => [ 'type' => 'string', 'default' => 'Tabellen' ],
-            'headingTag'   => [ 'type' => 'string', 'default' => 'h3' ],
-            'tableStyle'   => [ 'type' => 'string', 'default' => 'default' ], // default oder stripes
-            'align'        => [ 'type' => 'string', 'default' => '' ],
-            'className'    => [ 'type' => 'string', 'default' => '' ],
+            'titleSources'  => [ 'type' => 'string', 'default' => 'Quellen' ],
+            'titleImages'   => [ 'type' => 'string', 'default' => 'Bilder' ],
+            'titleTables'   => [ 'type' => 'string', 'default' => 'Tabellen' ],
+            'headingTag'    => [ 'type' => 'string', 'default' => 'h3' ],
+            'displayFormat' => [ 'type' => 'string', 'default' => 'table' ], // 🌟 WICHTIG: Muss exakt so hier stehen!
+            'align'         => [ 'type' => 'string', 'default' => '' ],
+            'className'     => [ 'type' => 'string', 'default' => '' ],
         ],
     ]);
 	// Native WordPress-Stil-Vorschauen hinzufügen
@@ -136,31 +136,39 @@ function wpls_render_sources_table( $attributes, $content ) {
     }
     usort($images_data, 'wpls_sort_sources');
 
-       // 3. TABELLEN SCANNEN (Mit ID-Erkennung für Sprunglinks)
+       // 3. TABELLEN SCANNEN & ID-INJEKTION (Automatische Sprungmarken-Generierung)
     $tables = $dom->getElementsByTagName('table');
     $table_count = 1;
     foreach ($tables as $table) {
         $title = '';
         $anchor_id = '';
 
-        // Prüfen, ob die Tabelle in einer Gutenberg-Figure liegt
+        // Prüfen, ob bereits ein manueller HTML-Anker am table-Tag existiert
+        $anchor_id = $table->getAttribute('id');
+
+        // Am umschließenden Element (Gutenberg-figure) nach dem manuellen Anker suchen
         $parent = $table->parentNode;
-        if ($parent && $parent->nodeName === 'figure') {
-            // ID vom umschließenden Figure-Element holen (Gutenberg Standard für HTML-Anker)
+        if (empty($anchor_id) && $parent && $parent->nodeName === 'figure') {
             $anchor_id = $parent->getAttribute('id');
+        }
+
+        // AUTOMATISCHE ID GENERIEREN, falls kein HTML-Anker vom Redakteur gesetzt wurde
+        if (empty($anchor_id)) {
+            $anchor_id = 'wpls-table-' . $table_count;
             
+            // Wir injizieren die ID direkt live in das table-Element für das Frontend
+            $table->setAttribute('id', $anchor_id);
+        }
+
+        // Titel aus figcaption auslesen
+        if ($parent && $parent->nodeName === 'figure') {
             $figcaptions = $parent->getElementsByTagName('figcaption');
             if ($figcaptions->length > 0) {
                 $title = trim($figcaptions->item(0)->textContent);
             }
         }
 
-        // Fallback: Wenn das Figure-Element keine ID hatte, prüfen wir das table-Tag selbst
-        if (empty($anchor_id)) {
-            $anchor_id = $table->getAttribute('id');
-        }
-
-        // Fallback auf klassische caption
+        // Fallback-Titel aus klassischer caption auslesen
         if (empty($title)) {
             $captions = $table->getElementsByTagName('caption');
             if ($captions->length > 0) {
@@ -175,20 +183,21 @@ function wpls_render_sources_table( $attributes, $content ) {
 
         $tables_data[] = [
             'title'     => esc_html($title),
-            'anchor_id' => esc_attr($anchor_id) // Speichert die ID falls vorhanden
+            'anchor_id' => esc_attr($anchor_id)
         ];
         $table_count++;
     }
 
+    // Da wir IDs direkt in den DOM-Baum injiziert haben, speichern wir das modifizierte HTML ab,
+    // damit die IDs auch im finalen Seiten-Markup landen (Wichtig für das Frontend!)
+    $html_with_ids = $dom->saveHTML();
 
-
-    // HTML-AUSGABE DER DREI BLOCK-SEKTIONEN (OHNE KOPFZEILEN)
+    // HTML-AUSGABE DER DREI SEKTIONEN
     $output = '<div class="' . $wrapper_class_str . '" style="margin-top: 30px; font-family: sans-serif;">';
 
     // Sektion 1: Quellen (Links)
     $output .= sprintf('<%1$s class="wpls-section-title">%2$s</%1$s>', $heading_tag, $title_sources);
     if (!empty($links_data)) {
-        // Kopfzeile entfernt, Tabelle startet direkt mit tbody
         $output .= sprintf('<table class="%s"><tbody>', $table_style_class);
         foreach ($links_data as $link) {
             $output .= sprintf('<tr><td><a href="%s" target="_blank" rel="noopener">%s</a></td></tr>', $link['url'], $link['title']);
@@ -210,31 +219,72 @@ function wpls_render_sources_table( $attributes, $content ) {
         $output .= '<p style="font-style:italic; color:#888; margin-bottom:20px;">' . esc_html__('Keine Bilder in diesem Beitrag gefunden.', 'wp-list-of-sources') . '</p>';
     }
 
-    // Sektion 3: Tabellen (Jetzt mit intelligenten Sprunglinks)
-    $output .= sprintf('<%1$s class="wpls-section-title" style="margin-top:25px;">%2$s</%1$s>', $heading_tag, $title_tables);
-    if (!empty($tables_data)) {
-        $output .= sprintf('<table class="%s"><tbody>', $table_style_class);
-        foreach ($tables_data as $tab) {
-            $output .= '<tr><td>';
-            // Wenn eine ID existiert, rendern wir einen echten Sprunglink
-            if (!empty($tab['anchor_id'])) {
-                $output .= sprintf('<a href="#%s">%s</a>', $tab['anchor_id'], $tab['title']);
-            } else {
-                // Andernfalls nur den nackten Text
-                $output .= $tab['title'];
-            }
-            $output .= '</td></tr>';
-        }
-        $output .= '</tbody></table>';
-    } else {
-        $output .= '<p style="font-style:italic; color:#888;">' . esc_html__('Keine Tabellen in diesem Beitrag gefunden.', 'wp-list-of-sources') . '</p>';
-    }
 
+    // Sektion 3: Tabellen (Zieht die physisch injizierten IDs aus der globalen Variable)
+    // Auslesen des gewählten Anzeigeformats (table oder list)
+    $display_format = !empty($attributes['displayFormat']) ? $attributes['displayFormat'] : 'table';
+
+    // HTML-AUSGABE DER DREI SEKTIONEN (Flexibel gesteuert nach Tabelle oder Liste)
+    $output = '<div class="' . $wrapper_class_str . '" style="margin-top: 30px; font-family: sans-serif;">';
+
+    // Hilfs-Arrays für die kompakte Generierung per Schleife
+    $sections = [
+        ['title' => $title_sources, 'data' => $links_data, 'type' => 'links', 'empty' => __('Keine Links in diesem Beitrag gefunden.', 'wp-list-of-sources')],
+        ['title' => $title_images,  'data' => $images_data, 'type' => 'images', 'empty' => __('Keine Bilder in diesem Beitrag gefunden.', 'wp-list-of-sources')],
+        ['title' => $title_tables,  'data' => $tables_data, 'type' => 'tables', 'empty' => __('Keine Tabellen in diesem Beitrag gefunden.', 'wp-list-of-sources')]
+    ];
+
+    global $wpls_generated_anchors;
+
+    foreach ($sections as $section) {
+        $output .= sprintf('<%1$s class="wpls-section-title" style="margin-top:25px; margin-bottom:10px;">%2$s</%1$s>', $heading_tag, $section['title']);
+        
+        if (!empty($section['data'])) {
+            // Start-Tag je nach Formatierung
+            if ($display_format === 'list') {
+                $output .= '<ul class="wpls-sources-list" style="margin:0 0 20px 0; padding-left:20px;">';
+            } else {
+                $output .= sprintf('<table class="%s"><tbody>', $table_style_class);
+            }
+
+            // Zeilen loopen
+            foreach ($section['data'] as $index => $item) {
+                // Inhalt vorbereiten
+                $item_html = '';
+                if ($section['type'] === 'tables') {
+                    $final_anchor = (!empty($wpls_generated_anchors[$index])) ? $wpls_generated_anchors[$index] : (!empty($item['anchor_id']) ? $item['anchor_id'] : '');
+                    if (empty($final_anchor)) {
+                        $final_anchor = 'wpls-table-' . ($index + 1);
+                    }
+                    $item_html = sprintf('<a href="#%s">%s</a>', $final_anchor, $item['title']);
+                } else {
+                    $item_html = sprintf('<a href="%s" target="_blank" rel="noopener">%s</a>', $item['url'], $item['title']);
+                }
+
+                // Verpacken je nach Formatierung
+                if ($display_format === 'list') {
+                    $output .= sprintf('<li style="margin-bottom:5px;">%s</li>', $item_html);
+                } else {
+                    $output .= sprintf('<tr><td>%s</td></tr>', $item_html);
+                }
+            }
+
+            // End-Tag je nach Formatierung
+            if ($display_format === 'list') {
+                $output .= '</ul>';
+            } else {
+                $output .= '</tbody></table>';
+            }
+        } else {
+            $output .= sprintf('<p style="font-style:italic; color:#888; margin-bottom:20px;">%s</p>', $section['empty']);
+        }
+    }
 
     $output .= '</div>';
     return $output;
 
 }
+
 
 // Hilfsfunktion: Rendert die flexible Dummy-Vorschau
 function wpls_render_template_dummy_preview($wrapper_class, $ts, $ti, $tt, $tag, $style) {
@@ -262,3 +312,55 @@ function wpls_render_template_dummy_preview($wrapper_class, $ts, $ti, $tt, $tag,
 
     return $output;
 }
+
+// Globale Variable, um die berechneten IDs zwischen Scan und Ausgabe zu übergeben
+global $wpls_generated_anchors;
+$wpls_generated_anchors = [];
+
+function wpls_inject_anchors_and_scan( $content ) {
+    global $wpls_generated_anchors;
+    if ( empty( trim( $content ) ) || is_feed() ) {
+        return $content;
+    }
+
+    libxml_use_internal_errors( true );
+    $dom = new DOMDocument();
+    // UTF-8 sichern beim Laden des gesamten Contents
+    $dom->loadHTML( '<?xml encoding="utf-8" ?><div>' . $content . '</div>', LIBXML_HTML_NOIMPLIED | LIBXML_HTML_NODEFDTD );
+    libxml_clear_errors();
+
+    $tables = $dom->getElementsByTagName( 'table' );
+    $table_count = 1;
+    $current_anchors = [];
+
+    foreach ( $tables as $table ) {
+        $anchor_id = $table->getAttribute( 'id' );
+        $parent = $table->parentNode;
+        
+        if ( empty( $anchor_id ) && $parent && $parent->nodeName === 'figure' ) {
+            $anchor_id = $parent->getAttribute( 'id' );
+        }
+
+        // Automatische ID vergeben, falls kein HTML-Anker existiert
+        if ( empty( $anchor_id ) ) {
+            $anchor_id = 'wpls-table-' . $table_count;
+            // ID wird jetzt GARANTIERT live in das Tabellen-HTML der Seite injiziert!
+            $table->setAttribute( 'id', $anchor_id );
+        }
+
+        $current_anchors[] = $anchor_id;
+        $table_count++;
+    }
+
+    // Die gesammelten IDs global für die Render-Funktion speichern
+    $wpls_generated_anchors = $current_anchors;
+
+    // Das modifizierte HTML (inklusive injizierter IDs) zurück an WordPress geben
+    $updated_html = $dom->saveHTML();
+    // Hilfs-Wrapper entfernen, um das originale Layout nicht zu stören
+    $updated_html = str_replace( array('<?xml encoding="utf-8" ?>', '<div>', '</div>'), '', $updated_html );
+    return $updated_html;
+}
+// Dieser Filter sorgt dafür, dass die IDs physisch an den Tabellen im Frontend landen!
+add_filter( 'the_content', 'wpls_inject_anchors_and_scan', 5 );
+

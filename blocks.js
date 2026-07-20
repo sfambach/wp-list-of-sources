@@ -69,7 +69,17 @@
                         } )
                     ),
                     
+                    // Panel 2: Design & Formatierung erweitert um das Anzeigeformat
                     el( PanelBody, { title: __( 'Design & Formatting', 'wp-list-of-sources' ), initialOpen: true },
+                        el( SelectControl, {
+                            label: __( 'Display Format', 'wp-list-of-sources' ),
+                            value: attributes.displayFormat || 'table',
+                            options: [
+                                { label: __( 'Table (Rows)', 'wp-list-of-sources' ), value: 'table' },
+                                { label: __( 'Unordered List (Bullets)', 'wp-list-of-sources' ), value: 'list' }
+                            ],
+                            onChange: function( value ) { setAttributes( { displayFormat: value } ); }
+                        } ),
                         el( SelectControl, {
                             label: __( 'Heading Tag', 'wp-list-of-sources' ),
                             value: attributes.headingTag,
@@ -85,6 +95,7 @@
                             onChange: function( value ) { setAttributes( { headingTag: value } ); }
                         } )
                     )
+
                 ),
 
                 el( 'div', { key: 'preview' },
