@@ -79,13 +79,14 @@ function wpls_render_sources_table( $attributes, $content ) {
     $post = $post_id ? get_post($post_id) : null;
     $is_template_preview = ( ! $post || $post->post_type === 'wp_block' || $post->post_type === 'wp_template' || $post_id === 0 );
 
-    // Attribute sichern und sanitisieren
-    $title_sources = !empty($attributes['titleSources']) ? esc_html($attributes['titleSources']) : 'Quellen';
-    $title_images  = !empty($attributes['titleImages']) ? esc_html($attributes['titleImages']) : 'Bilder';
-    $title_tables  = !empty($attributes['titleTables']) ? esc_html($attributes['titleTables']) : 'Tabellen';
+    // 1. ZUERST ALLE ATTRIBUTE AUSLESEN (Wichtig für Frontend UND Preview!)
+    $title_sources   = !empty($attributes['titleSources']) ? esc_html($attributes['titleSources']) : 'Quellen';
+    $title_images    = !empty($attributes['titleImages']) ? esc_html($attributes['titleImages']) : 'Bilder';
+    $title_tables    = !empty($attributes['titleTables']) ? esc_html($attributes['titleTables']) : 'Tabellen';
+    $display_format  = !empty($attributes['displayFormat']) ? $attributes['displayFormat'] : 'table';
     
-    $allowed_tags  = ['h2', 'h3', 'h4', 'h5', 'h6', 'p', 'div'];
-    $heading_tag   = in_array($attributes['headingTag'], $allowed_tags) ? $attributes['headingTag'] : 'h3';
+    $allowed_tags    = ['h2', 'h3', 'h4', 'h5', 'h6', 'p', 'div'];
+    $heading_tag     = in_array($attributes['headingTag'], $allowed_tags) ? $attributes['headingTag'] : 'h3';
     
     $table_style_class = ( !empty($attributes['className']) && strpos( $attributes['className'], 'is-style-stripes' ) !== false ) ? 'is-style-stripes' : '';
 
@@ -94,16 +95,14 @@ function wpls_render_sources_table( $attributes, $content ) {
     if ( ! empty( $attributes['className'] ) ) $wrapper_classes[] = $attributes['className'];
     $wrapper_class_str = implode( ' ', array_map( 'sanitize_html_class', $wrapper_classes ) );
 
-	if ( $is_template_preview ) {
-        // Holt das aktuelle Format, um es an die Dummy-Vorschau weiterzugeben
-        $display_format = !empty($attributes['displayFormat']) ? $attributes['attributes']['displayFormat'] : 'table';
-        
-        // REPARIERT: $display_format wird jetzt als 7. Argument übergeben!
+    // 2. JETZT ERST DIE PREVIEW PRÜFEN (Jetzt sind alle Variablen gefüllt!)
+    if ( $is_template_preview ) {
         return wpls_render_template_dummy_preview($wrapper_class_str, $title_sources, $title_images, $title_tables, $heading_tag, $table_style_class, $display_format);
     }
 
-
+    // 3. ECHTE FRONTEND LOGIK FOLGT HIER...
     $html = $post->post_content;
+
     if (empty(trim($html))) {
         return '<p style="font-style:italic; color:#666;">' . esc_html__( 'No content found to analyze.', 'wp-list-of-sources' ) . '</p>';
     }
