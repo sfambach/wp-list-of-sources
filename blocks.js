@@ -24,6 +24,7 @@
             titleImages: { type: 'string', default: 'Bilder' },
             titleTables: { type: 'string', default: 'Tabellen' },
             headingTag: { type: 'string', default: 'h3' },
+            displayFormat: { type: 'string', default: 'table' }, // 🌟 DIESE ZEILE FEHLT IN JS!
             align: { type: 'string', default: '' },
             className: { type: 'string', default: '' }
         },
@@ -70,10 +71,13 @@
                     ),
                     
                     // Panel 2: Design & Formatierung erweitert um das Anzeigeformat
+                                       // Panel 2: Design & Formatierung (Jetzt mit fehlerfreier Value-Rückgabe!)
                     el( PanelBody, { title: __( 'Design & Formatting', 'wp-list-of-sources' ), initialOpen: true },
                         el( SelectControl, {
                             label: __( 'Display Format', 'wp-list-of-sources' ),
-                            value: attributes.displayFormat || 'table',
+                            // FIX: Zuvor stand hier attributes.displayFormat || 'table'. 
+                            // Wir binden es fest an das Attribut, damit WordPress den ausgewählten Wert speichert und hält.
+                            value: attributes.displayFormat, 
                             options: [
                                 { label: __( 'Table (Rows)', 'wp-list-of-sources' ), value: 'table' },
                                 { label: __( 'Unordered List (Bullets)', 'wp-list-of-sources' ), value: 'list' }
@@ -95,6 +99,7 @@
                             onChange: function( value ) { setAttributes( { headingTag: value } ); }
                         } )
                     )
+
 
                 ),
 
