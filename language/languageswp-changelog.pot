@@ -1,0 +1,100 @@
+# Copyright (C) 2026 Ihr Name
+# This file is distributed under the GPLv2 or later.
+msgid ""
+msgstr ""
+"Project-Id-Version: Gutenberg Changelog & Version History 1.1.0\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2026-07-20 09:40+0000\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"Language: \n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"X-Generator: WP-CLI 2.10.0\n"
+"X-Domain: wp-changelog\n"
+
+#: wp-gutenberg-changelog.php:61
+msgid "Please save the post as a draft to load the history."
+msgstr ""
+
+#: wp-gutenberg-changelog.php:73
+msgid "Post created"
+msgstr ""
+
+#: wp-gutenberg-changelog.php:74
+msgid "System"
+msgstr ""
+
+#: wp-gutenberg-changelog.php:82
+msgid "Unknown"
+msgstr ""
+
+#: wp-gutenberg-changelog.php:124
+msgid "Date"
+msgstr ""
+
+#: wp-gutenberg-changelog.php:126
+msgid "Author"
+msgstr ""
+
+#: wp-gutenberg-changelog.php:128
+msgid "Change"
+msgstr ""
+
+#: blocks.js:18
+msgid "Change Note (Backend Only)"
+msgstr ""
+
+#: blocks.js:46
+msgid "Internal change from:"
+msgstr ""
+
+#: blocks.js:46
+msgid "Author:"
+msgstr ""
+
+#: blocks.js:46
+msgid "Loading..."
+msgstr ""
+
+#: blocks.js:49
+msgid "What was changed?"
+msgstr ""
+
+#: blocks.js:54
+msgid "e.g. Fixed typo, replaced header image..."
+msgstr ""
+
+#: blocks.js:69
+msgid "Changelog Table"
+msgstr ""
+
+#: blocks.js:94
+msgid "Please save the post as a draft to enable the live preview of the table."
+msgstr ""
+
+#: blocks.js:109
+msgid "Table Settings"
+msgstr ""
+
+#: blocks.js:111
+msgid "Show Author"
+msgstr ""
+
+#: blocks.js:112
+msgid "Displays the name of the author who logged the change."
+msgstr ""
+
+#: blocks.js:118
+msgid "Fixed width table cells"
+msgstr ""
+
+#: blocks.js:119
+msgid "Defines fixed column widths instead of variable widths."
+msgstr ""
+
+#: blocks.js:129
+msgid "Table Live Preview:"
+msgstr ""

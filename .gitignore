@@ -1,0 +1,15 @@
+text# OS-spezifische Dateien
+.DS_Store
+Thumbs.db
+
+# Entwickler-Tools & IDEs
+.vscode/
+.idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+
+# WordPress Test-Überreste (falls Sie mal lokal testen)
+node_modules/
+vendor/

@@ -1,0 +1,25 @@
+{
+    "domain": "wp-changelog",
+    "locale_data": {
+        "wp-changelog": {
+            "": {
+                "domain": "wp-changelog",
+                "lang": "de_DE",
+                "plural_forms": "nplurals=2; plural=(n != 1);"
+            },
+            "Change Note (Backend Only)": [ "Änderungs-Notiz (Nur Backend)" ],
+            "Internal change from:": [ "Interne Änderung vom:" ],
+            "Author:": [ "Autor:" ],
+            "Loading...": [ "Lade..." ],
+            "What was changed?": [ "Was wurde geändert?" ],
+            "e.g. Fixed typo, replaced header image...": [ "z.B. Tippfehler korrigiert, Bild ausgetauscht..." ],
+            "Changelog Table": [ "Änderungshistorie Tabelle" ],
+            "Table Settings": [ "Tabelleneinstellungen" ],
+            "Show Author": [ "Autor anzeigen" ],
+            "Displays the name of the author who logged the change.": [ "Zeigt den Namen des Änderungs-Autors in der Tabelle an." ],
+            "Fixed width table cells": [ "Zellen mit fester Breite" ],
+            "Defines fixed column widths instead of variable widths.": [ "Definiert feste Spaltenbreiten statt variabler Breiten." ],
+            "Table Live Preview:": [ "Live-Vorschau der Tabelle:" ]
+        }
+    }
+}
