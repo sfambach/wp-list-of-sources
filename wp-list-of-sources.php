@@ -94,10 +94,14 @@ function wpls_render_sources_table( $attributes, $content ) {
     if ( ! empty( $attributes['className'] ) ) $wrapper_classes[] = $attributes['className'];
     $wrapper_class_str = implode( ' ', array_map( 'sanitize_html_class', $wrapper_classes ) );
 
-    if ( $is_template_preview ) {
+	if ( $is_template_preview ) {
+        // Holt das aktuelle Format, um es an die Dummy-Vorschau weiterzugeben
+        $display_format = !empty($attributes['displayFormat']) ? $attributes['attributes']['displayFormat'] : 'table';
+        
+        // REPARIERT: $display_format wird jetzt als 7. Argument übergeben!
         return wpls_render_template_dummy_preview($wrapper_class_str, $title_sources, $title_images, $title_tables, $heading_tag, $table_style_class, $display_format);
-
     }
+
 
     $html = $post->post_content;
     if (empty(trim($html))) {
