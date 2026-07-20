@@ -95,7 +95,8 @@ function wpls_render_sources_table( $attributes, $content ) {
     $wrapper_class_str = implode( ' ', array_map( 'sanitize_html_class', $wrapper_classes ) );
 
     if ( $is_template_preview ) {
-        return wpls_render_template_dummy_preview($wrapper_class_str, $title_sources, $title_images, $title_tables, $heading_tag, $table_style_class);
+        return wpls_render_template_dummy_preview($wrapper_class_str, $title_sources, $title_images, $title_tables, $heading_tag, $table_style_class, $display_format);
+
     }
 
     $html = $post->post_content;
@@ -240,28 +241,31 @@ function wpls_render_sources_table( $attributes, $content ) {
         $output .= sprintf('<%1$s class="wpls-section-title" style="margin-top:25px; margin-bottom:10px;">%2$s</%1$s>', $heading_tag, $section['title']);
         
         if (!empty($section['data'])) {
-            // Start-Tag je nach Formatierung
+            // Start-Tag je nach gewähltem Format generieren
             if ($display_format === 'list') {
                 $output .= '<ul class="wpls-sources-list" style="margin:0 0 20px 0; padding-left:20px;">';
             } else {
                 $output .= sprintf('<table class="%s"><tbody>', $table_style_class);
             }
 
-            // Zeilen loopen
+            // Schleife durch alle Einträge der aktuellen Sektion
             foreach ($section['data'] as $index => $item) {
-                // Inhalt vorbereiten
                 $item_html = '';
+
+                // A) Sonderfall für die Tabellen-Sektion (Sprunglinks berechnen)
                 if ($section['type'] === 'tables') {
                     $final_anchor = (!empty($wpls_generated_anchors[$index])) ? $wpls_generated_anchors[$index] : (!empty($item['anchor_id']) ? $item['anchor_id'] : '');
                     if (empty($final_anchor)) {
                         $final_anchor = 'wpls-table-' . ($index + 1);
                     }
                     $item_html = sprintf('<a href="#%s">%s</a>', $final_anchor, $item['title']);
-                } else {
+                } 
+                // B) Regelfall für Links und Bilder (Externe Ziel-Links)
+                else {
                     $item_html = sprintf('<a href="%s" target="_blank" rel="noopener">%s</a>', $item['url'], $item['title']);
                 }
 
-                // Verpacken je nach Formatierung
+                // HTML verpacken je nach gewählter UI-Einstellung
                 if ($display_format === 'list') {
                     $output .= sprintf('<li style="margin-bottom:5px;">%s</li>', $item_html);
                 } else {
@@ -269,7 +273,7 @@ function wpls_render_sources_table( $attributes, $content ) {
                 }
             }
 
-            // End-Tag je nach Formatierung
+            // End-Tag je nach Formatierung schließen
             if ($display_format === 'list') {
                 $output .= '</ul>';
             } else {
@@ -280,38 +284,46 @@ function wpls_render_sources_table( $attributes, $content ) {
         }
     }
 
+
     $output .= '</div>';
     return $output;
 
 }
 
 
-// Hilfsfunktion: Rendert die flexible Dummy-Vorschau
-function wpls_render_template_dummy_preview($wrapper_class, $ts, $ti, $tt, $tag, $style) {
+// Hilfsfunktion: Rendert die flexible Dummy-Vorschau passend zum Anzeigeformat
+function wpls_render_template_dummy_preview($wrapper_class, $ts, $ti, $tt, $tag, $style, $display_format = 'table') {
     $output = '<div class="' . $wrapper_class . '" style="border: 1px dashed #ccc; padding: 15px; background: #fafafa; font-family: sans-serif;">';
     $output .= '<span style="display:block; font-size:11px; color:#999; text-transform:uppercase; margin-bottom:10px;">' . esc_html__('Table Live Preview (Template Mode):', 'wp-list-of-sources') . '</span>';
     
+    // Sektion 1
     $output .= sprintf('<%1$s style="margin: 0 0 5px 0;">%2$s</%1$s>', $tag, $ts);
-    $output .= sprintf('<table class="%s" style="margin-bottom:15px;"><tbody>', $style);
-    $output .= '<tr><td><a href="#">' . esc_html__('Beispiel-Quelle mit Titel (Oben sortiert)', 'wp-list-of-sources') . '</a></td></tr>';
-    $output .= '<tr><td><a href="#">https://example.com</a></td></tr>';
-    $output .= '</tbody></table>';
+    if ($display_format === 'list') {
+        $output .= '<ul style="margin-bottom:15px; padding-left:20px;"><li><a href="#">Beispiel-Quelle mit Titel</a></li><li><a href="#">https://example.com</a></li></ul>';
+    } else {
+        $output .= sprintf('<table class="%s" style="margin-bottom:15px;"><tbody><tr><td><a href="#">Beispiel-Quelle mit Titel</a></td></tr><tr><td><a href="#">https://example.com</a></td></tr></tbody></table>', $style);
+    }
 
+    // Sektion 2
     $output .= sprintf('<%1$s style="margin: 0 0 5px 0;">%2$s</%1$s>', $tag, $ti);
-    $output .= sprintf('<table class="%s" style="margin-bottom:15px;"><tbody>', $style);
-    $output .= '<tr><td><a href="#">' . esc_html__('Schönes Hintergrundbild (Alt-Text vorhanden)', 'wp-list-of-sources') . '</a></td></tr>';
-    $output .= '<tr><td><a href="#">https://example.com</a></td></tr>';
-    $output .= '</tbody></table>';
+    if ($display_format === 'list') {
+        $output .= '<ul style="margin-bottom:15px; padding-left:20px;"><li><a href="#">Schönes Hintergrundbild</a></li></ul>';
+    } else {
+        $output .= sprintf('<table class="%s" style="margin-bottom:15px;"><tbody><tr><td><a href="#">Schönes Hintergrundbild</a></td></tr></tbody></table>', $style);
+    }
 
+    // Sektion 3
     $output .= sprintf('<%1$s style="margin: 0 0 5px 0;">%2$s</%1$s>', $tag, $tt);
-    $output .= sprintf('<table class="%s"><tbody>', $style);
-    $output .= '<tr><td>' . esc_html__('Tabelle 1 (Statistik)', 'wp-list-of-sources') . '</td></tr>';
-    $output .= '</tbody></table>';
+    if ($display_format === 'list') {
+        $output .= '<ul style="padding-left:20px;"><li>Tabelle 1 (Statistik)</li></ul>';
+    } else {
+        $output .= sprintf('<table class="%s"><tbody><tr><td>Tabelle 1 (Statistik)</td></tr></tbody></table>', $style);
+    }
 
     $output .= '</div>';
-
     return $output;
 }
+
 
 // Globale Variable, um die berechneten IDs zwischen Scan und Ausgabe zu übergeben
 global $wpls_generated_anchors;
