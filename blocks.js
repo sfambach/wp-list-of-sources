@@ -43,11 +43,23 @@
             var queryArgs = { trigger: blocksContentHash ? blocksContentHash.length : 0 };
             if ( currentPostId ) { queryArgs.post_id = currentPostId; }
 
+            // Holt die numerische Stufe aus dem Tag-String (z.B. "h3" -> 3)
+            var currentLevel = parseInt( attributes.headingTag.replace( 'h', '' ) ) || 3;
+
             return [
-                el( BlockControls, { key: 'controls' },
-                    el( BlockAlignmentControl, {
+                // Die Block-Toolbar über dem Block wird um die native H1-H6 Auswahl erweitert
+                el( blockEditor.BlockControls, { key: 'controls' },
+                    el( blockEditor.BlockAlignmentControl, {
                         value: attributes.align,
                         onChange: function( nextAlign ) { setAttributes( { align: nextAlign } ); }
+                    } ),
+                    // Das originale WordPress H1-H6 Steuerelement!
+                    el( blockEditor.HeadingLevelDropdown, {
+                        value: currentLevel,
+                        options: [ 1, 2, 3, 4, 5, 6 ], // Erlaubt H1 bis H6
+                        onChange: function( newLevel ) {
+                            setAttributes( { headingTag: 'h' + newLevel } );
+                        }
                     } )
                 ),
 
@@ -70,37 +82,17 @@
                         } )
                     ),
                     
-                    // Panel 2: Design & Formatierung erweitert um das Anzeigeformat
-                                       // Panel 2: Design & Formatierung (Jetzt mit fehlerfreier Value-Rückgabe!)
                     el( PanelBody, { title: __( 'Design & Formatting', 'wp-list-of-sources' ), initialOpen: true },
                         el( SelectControl, {
                             label: __( 'Display Format', 'wp-list-of-sources' ),
-                            // FIX: Zuvor stand hier attributes.displayFormat || 'table'. 
-                            // Wir binden es fest an das Attribut, damit WordPress den ausgewählten Wert speichert und hält.
-                            value: attributes.displayFormat, 
+                            value: attributes.displayFormat,
                             options: [
                                 { label: __( 'Table (Rows)', 'wp-list-of-sources' ), value: 'table' },
                                 { label: __( 'Unordered List (Bullets)', 'wp-list-of-sources' ), value: 'list' }
                             ],
                             onChange: function( value ) { setAttributes( { displayFormat: value } ); }
-                        } ),
-                        el( SelectControl, {
-                            label: __( 'Heading Tag', 'wp-list-of-sources' ),
-                            value: attributes.headingTag,
-                            options: [
-                                { label: 'Heading 2 (h2)', value: 'h2' },
-                                { label: 'Heading 3 (h3)', value: 'h3' },
-                                { label: 'Heading 4 (h4)', value: 'h4' },
-                                { label: 'Heading 5 (h5)', value: 'h5' },
-                                { label: 'Heading 6 (h6)', value: 'h6' },
-                                { label: 'Paragraph (p)', value: 'p' },
-                                { label: 'Division (div)', value: 'div' }
-                            ],
-                            onChange: function( value ) { setAttributes( { headingTag: value } ); }
                         } )
                     )
-
-
                 ),
 
                 el( 'div', { key: 'preview' },
@@ -111,7 +103,8 @@
                     } )
                 )
             ];
-        },
+        }
+      
         save: function() { return null; }
     } );
 

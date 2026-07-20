@@ -57,6 +57,17 @@ function wpls_enqueue_block_editor_assets() {
 }
 add_action( 'enqueue_block_editor_assets', 'wpls_enqueue_block_editor_assets' );
 
+// Fügt im Frontend fließendes Scrollen (Smooth Scroll) für unsere Sprunglinks hinzu
+function wpls_frontend_styles() {
+    echo '<style>
+        html { scroll-behavior: smooth; }
+        .wpls-sources-list a, .wp-block-sources-table a { text-decoration: none; }
+        .wpls-sources-list a:hover, .wp-block-sources-table a:hover { text-decoration: underline; }
+    </style>';
+}
+add_action( 'wp_head', 'wpls_frontend_styles' );
+
+
 // Hilfsfunktion zur Sortierung: Einträge mit Titel/Name nach oben
 function wpls_sort_sources($a, $b) {
     $a_has_title = (!empty($a['title']) && $a['title'] !== $a['url']);
@@ -85,7 +96,7 @@ function wpls_render_sources_table( $attributes, $content ) {
     $title_tables    = !empty($attributes['titleTables']) ? esc_html($attributes['titleTables']) : 'Tabellen';
     $display_format  = !empty($attributes['displayFormat']) ? $attributes['displayFormat'] : 'table';
     
-    $allowed_tags    = ['h2', 'h3', 'h4', 'h5', 'h6', 'p', 'div'];
+    $allowed_tags    = ['h1','h2', 'h3', 'h4', 'h5', 'h6', 'p', 'div'];
     $heading_tag     = in_array($attributes['headingTag'], $allowed_tags) ? $attributes['headingTag'] : 'h3';
     
     $table_style_class = ( !empty($attributes['className']) && strpos( $attributes['className'], 'is-style-stripes' ) !== false ) ? 'is-style-stripes' : '';
@@ -100,9 +111,16 @@ function wpls_render_sources_table( $attributes, $content ) {
         return wpls_render_template_dummy_preview($wrapper_class_str, $title_sources, $title_images, $title_tables, $heading_tag, $table_style_class, $display_format);
     }
 
-    // 3. ECHTE FRONTEND LOGIK FOLGT HIER...
-    $html = $post->post_content;
+    // --- 1. PERFORMANCE: TRANSIENT-CACHE PRÜFEN ---
+    // Erzeugt einen eindeutigen Cache-Schlüssel basierend auf der Beitrags-ID und den Attributen
+    $cache_key = 'wpls_cache_' . $post_id . '_' . md5(serialize($attributes));
+    $cached_output = get_transient($cache_key);
 
+    if ( $cached_output !== false ) {
+        return $cached_output; // Cache-Treffer: Sofort das fertige HTML ausgeben!
+    }
+
+    $html = $post->post_content;
     if (empty(trim($html))) {
         return '<p style="font-style:italic; color:#666;">' . esc_html__( 'No content found to analyze.', 'wp-list-of-sources' ) . '</p>';
     }
@@ -128,14 +146,23 @@ function wpls_render_sources_table( $attributes, $content ) {
     }
     usort($links_data, 'wpls_sort_sources');
 
-    // 2. BILDER SCANNEN
+    // 2. BILDER SCANNEN (--- 4. DATEINAMEN-KÜRZUNG INTEGRIERT ---)
     $images = $dom->getElementsByTagName('img');
     foreach ($images as $img) {
         $url   = $img->getAttribute('src');
         $alt   = $img->getAttribute('alt');
         $title = $img->getAttribute('title');
         if (empty($url)) continue;
-        $final_title = !empty($alt) ? $alt : (!empty($title) ? $title : $url);
+
+        // Wenn kein Alt/Title da ist, extrahieren wir nur den reinen Dateinamen aus dem Pfad
+        if (empty($alt) && empty($title)) {
+            $final_title = basename(parse_url($url, PHP_URL_PATH));
+            // Falls basename fehlschlägt, nutzen wir die URL als sicheren Fallback
+            if (empty($final_title)) { $final_title = $url; }
+        } else {
+            $final_title = !empty($alt) ? $alt : $title;
+        }
+
         $images_data[] = [ 'url' => esc_url($url), 'title' => esc_html($final_title) ];
     }
     usort($images_data, 'wpls_sort_sources');
@@ -241,7 +268,11 @@ function wpls_render_sources_table( $attributes, $content ) {
     global $wpls_generated_anchors;
 
     foreach ($sections as $section) {
-        $output .= sprintf('<%1$s class="wpls-section-title" style="margin-top:25px; margin-bottom:10px;">%2$s</%1$s>', $heading_tag, $section['title']);
+         $output .= sprintf(
+            '<%1$s class="wp-block-heading" style="margin-top:25px; margin-bottom:10px;">%2$s</%1$s>', 
+            $heading_tag, 
+            $section['title']
+        );
         
         if (!empty($section['data'])) {
             // Start-Tag je nach gewähltem Format generieren
@@ -287,8 +318,11 @@ function wpls_render_sources_table( $attributes, $content ) {
         }
     }
 
-
+    
     $output .= '</div>';
+	
+    // HTML für 12 Stunden im Cache einfrieren
+    set_transient($cache_key, $output, 12 * HOUR_IN_SECONDS);
     return $output;
 
 }
@@ -379,3 +413,15 @@ function wpls_inject_anchors_and_scan( $content ) {
 // Dieser Filter sorgt dafür, dass die IDs physisch an den Tabellen im Frontend landen!
 add_filter( 'the_content', 'wpls_inject_anchors_and_scan', 5 );
 
+// Löscht alle Transients dieses Beitrags, wenn er im Editor aktualisiert wird
+function wpls_clear_post_transients( $post_id ) {
+    // Da Attribute im Cache-Key per MD5 verschlüsselt sind, löschen wir alle Transients,
+    // die mit der ID dieses Beitrags beginnen, direkt aus der WordPress-Datenbank.
+    global $wpdb;
+    $wpdb->query( $wpdb->prepare(
+        "DELETE FROM {$wpdb->options} WHERE option_name LIKE %s OR option_name LIKE %s",
+        '_transient_wpls_cache_' . $post_id . '_%',
+        '_transient_timeout_wpls_cache_' . $post_id . '_%'
+    ) );
+}
+add_action( 'save_post', 'wpls_clear_post_transients' );
