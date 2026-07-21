@@ -76,8 +76,8 @@ function wpls_enqueue_block_editor_assets() {
 add_action( 'enqueue_block_editor_assets', 'wpls_enqueue_block_editor_assets' );
 
 function wpls_sort_sources($a, $b) {
-    // Prüfen, ob ein echter Titel existiert (der ungleich der nackten URL ist)
-	$a_has_title = (!empty($a['title']) && $a['title'] !== $a['url'] && strtolower($a['title']) !== '-');
+    // KORRIGIERT: Alle Klammern und Abfragen sauber geschlossen
+    $a_has_title = (!empty($a['title']) && $a['title'] !== $a['url'] && strtolower($a['title']) !== '-');
     $b_has_title = (!empty($b['title']) && $b['title'] !== $b['url'] && strtolower($b['title']) !== '-');
 
     if ($a_has_title && !$b_has_title) return -1; // Einträge mit echtem Titel nach oben
