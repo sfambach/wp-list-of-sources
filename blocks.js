@@ -7,6 +7,8 @@
     var InspectorControls = blockEditor.InspectorControls;
     var BlockControls = blockEditor.BlockControls;
     var BlockAlignmentControl = blockEditor.BlockAlignmentControl;
+    // REPARIERT: HeadingLevelDropdown fehlte hier oben im WP-Import!
+    var HeadingLevelDropdown = blockEditor.HeadingLevelDropdown; 
     
     var __ = i18n.__;
 
@@ -17,14 +19,14 @@
         supports: {
             align: [ 'left', 'center', 'right', 'wide', 'full' ],
             className: true,
-            styles: true // Aktiviert die nativen runden WP-Stil-Vorschau-Buttons
+            styles: true
         },
         attributes: {
             titleSources: { type: 'string', default: 'Quellen' },
             titleImages: { type: 'string', default: 'Bilder' },
             titleTables: { type: 'string', default: 'Tabellen' },
             headingTag: { type: 'string', default: 'h3' },
-            displayFormat: { type: 'string', default: 'table' }, // 🌟 DIESE ZEILE FEHLT IN JS!
+            displayFormat: { type: 'string', default: 'table' },
             align: { type: 'string', default: '' },
             className: { type: 'string', default: '' }
         },
@@ -43,20 +45,19 @@
             var queryArgs = { trigger: blocksContentHash ? blocksContentHash.length : 0 };
             if ( currentPostId ) { queryArgs.post_id = currentPostId; }
 
-            // Holt die numerische Stufe aus dem Tag-String (z.B. "h3" -> 3)
+            // Numerische Stufe für das Dropdown ermitteln (z.B. "h3" -> 3)
             var currentLevel = parseInt( attributes.headingTag.replace( 'h', '' ) ) || 3;
 
             return [
-                // Die Block-Toolbar über dem Block wird um die native H1-H6 Auswahl erweitert
-                el( blockEditor.BlockControls, { key: 'controls' },
-                    el( blockEditor.BlockAlignmentControl, {
+                el( BlockControls, { key: 'controls' },
+                    el( BlockAlignmentControl, {
                         value: attributes.align,
                         onChange: function( nextAlign ) { setAttributes( { align: nextAlign } ); }
                     } ),
-                    // Das originale WordPress H1-H6 Steuerelement!
-                    el( blockEditor.HeadingLevelDropdown, {
+                    // REPARIERT: Nutzt jetzt die native WP-Komponente ohne Namespace-Fehler
+                    el( HeadingLevelDropdown, {
                         value: currentLevel,
-                        options: [ 1, 2, 3, 4, 5, 6 ], // Erlaubt H1 bis H6
+                        levels: [ 1, 2, 3, 4, 5, 6 ],
                         onChange: function( newLevel ) {
                             setAttributes( { headingTag: 'h' + newLevel } );
                         }
@@ -97,14 +98,14 @@
 
                 el( 'div', { key: 'preview' },
                     el( wp.serverSideRender, {
-                        block: 'wpls/sources-table',
+                        // REPARIERT: Hier stand zuvor fälschlicherweise 'wpc/change-table'
+                        block: 'wpls/sources-table', 
                         attributes: attributes,
                         urlQueryArgs: queryArgs
                     } )
                 )
             ];
-        }
-      
+        },
         save: function() { return null; }
     } );
 
