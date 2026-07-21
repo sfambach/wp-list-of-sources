@@ -4,12 +4,16 @@
     var SelectControl = components.SelectControl;
     var PanelBody = components.PanelBody;
 
+    var ToggleControl = components.ToggleControl;
+
     var InspectorControls = blockEditor.InspectorControls;
     var BlockControls = blockEditor.BlockControls;
     var BlockAlignmentControl = blockEditor.BlockAlignmentControl;
-    // REPARIERT: HeadingLevelDropdown fehlte hier oben im WP-Import!
-    var HeadingLevelDropdown = blockEditor.HeadingLevelDropdown; 
-    
+    // FIX: HeadingLevelDropdown war eine interne/private WP-Komponente, die in vielen
+    // WP-Versionen unter diesem Namen gar nicht öffentlich existiert - dadurch verschwand
+    // die Überschriften-Einstellung komplett. Ersetzt durch ein robustes SelectControl
+    // weiter unten im Inspector-Panel.
+
     var __ = i18n.__;
 
     blocks.registerBlockType( 'wpls/sources-table', {
@@ -25,14 +29,18 @@
             titleSources: { type: 'string', default: 'Quellen' },
             titleImages: { type: 'string', default: 'Bilder' },
             titleTables: { type: 'string', default: 'Tabellen' },
+            titleFiles: { type: 'string', default: 'Dateien' },
             headingTag: { type: 'string', default: 'h3' },
             displayFormat: { type: 'string', default: 'table' },
+            stripUrlPrefix: { type: 'boolean', default: true },
             align: { type: 'string', default: '' },
             className: { type: 'string', default: '' }
         },
         edit: function( props ) {
             var attributes = props.attributes;
             var setAttributes = props.setAttributes;
+            var useEffect = element.useEffect;
+            var useState = element.useState;
 
             var editorSelect = data.select( 'core/editor' );
             var currentPostId = editorSelect ? editorSelect.getCurrentPostId() : null;
@@ -42,25 +50,42 @@
                 return editor ? editor.getEditedPostContent() : '';
             }, [] );
 
-            var queryArgs = { trigger: blocksContentHash ? blocksContentHash.length : 0 };
+            // FIX: Die Vorschau rendert serverseitig den GESPEICHERTEN Beitragsinhalt, nicht den
+            // gerade im Editor getippten Text. Ein reiner Text-Änderungs-Trigger (blocksContentHash)
+            // löst zwar beim Tippen einen Refresh aus, der aber noch die alten (ungespeicherten)
+            // Daten liefert. Deshalb wird hier zusätzlich erkannt, wann ein Speichervorgang fertig
+            // ist, und dann ein weiterer Refresh erzwungen - der dann die frisch gespeicherten
+            // Bilder/Links tatsächlich anzeigt, ohne dass ein kompletter Seiten-Reload nötig ist.
+            var isSaving = data.useSelect( function( select ) {
+                var editor = select( 'core/editor' );
+                return editor ? ( editor.isSavingPost() && ! editor.isAutosavingPost() ) : false;
+            }, [] );
+
+            var refreshState = useState( 0 );
+            var refreshToken = refreshState[ 0 ];
+            var setRefreshToken = refreshState[ 1 ];
+            var wasSavingRef = element.useRef( false );
+
+            useEffect( function() {
+                if ( wasSavingRef.current && ! isSaving ) {
+                    // Speichervorgang ist gerade abgeschlossen -> Vorschau neu anfragen
+                    setRefreshToken( function( t ) { return t + 1; } );
+                }
+                wasSavingRef.current = isSaving;
+            }, [ isSaving ] );
+
+            var queryArgs = { trigger: ( blocksContentHash ? blocksContentHash.length : 0 ) + '-' + refreshToken };
             if ( currentPostId ) { queryArgs.post_id = currentPostId; }
 
-            // Numerische Stufe für das Dropdown ermitteln (z.B. "h3" -> 3)
-            var currentLevel = parseInt( attributes.headingTag.replace( 'h', '' ) ) || 3;
+            var headingOptions = [ 1, 2, 3, 4, 5, 6 ].map( function( level ) {
+                return { label: 'H' + level, value: 'h' + level };
+            } );
 
             return [
                 el( BlockControls, { key: 'controls' },
                     el( BlockAlignmentControl, {
                         value: attributes.align,
                         onChange: function( nextAlign ) { setAttributes( { align: nextAlign } ); }
-                    } ),
-                    // REPARIERT: Nutzt jetzt die native WP-Komponente ohne Namespace-Fehler
-                    el( HeadingLevelDropdown, {
-                        value: currentLevel,
-                        levels: [ 1, 2, 3, 4, 5, 6 ],
-                        onChange: function( newLevel ) {
-                            setAttributes( { headingTag: 'h' + newLevel } );
-                        }
                     } )
                 ),
 
@@ -80,10 +105,22 @@
                             label: __( 'Title for Tables', 'wp-list-of-sources' ),
                             value: attributes.titleTables,
                             onChange: function( value ) { setAttributes( { titleTables: value } ); }
+                        } ),
+                        el( TextControl, {
+                            label: __( 'Title for Files', 'wp-list-of-sources' ),
+                            value: attributes.titleFiles,
+                            onChange: function( value ) { setAttributes( { titleFiles: value } ); }
                         } )
                     ),
                     
                     el( PanelBody, { title: __( 'Design & Formatting', 'wp-list-of-sources' ), initialOpen: true },
+                        // FIX: robuster Ersatz für die verschwundene HeadingLevelDropdown-Einstellung
+                        el( SelectControl, {
+                            label: __( 'Heading Level', 'wp-list-of-sources' ),
+                            value: attributes.headingTag,
+                            options: headingOptions,
+                            onChange: function( value ) { setAttributes( { headingTag: value } ); }
+                        } ),
                         el( SelectControl, {
                             label: __( 'Display Format', 'wp-list-of-sources' ),
                             value: attributes.displayFormat,
@@ -92,6 +129,11 @@
                                 { label: __( 'Unordered List (Bullets)', 'wp-list-of-sources' ), value: 'list' }
                             ],
                             onChange: function( value ) { setAttributes( { displayFormat: value } ); }
+                        } ),
+                        el( ToggleControl, {
+                            label: __( 'Remove http(s):// and www. from labels', 'wp-list-of-sources' ),
+                            checked: attributes.stripUrlPrefix,
+                            onChange: function( value ) { setAttributes( { stripUrlPrefix: value } ); }
                         } )
                     )
                 ),
