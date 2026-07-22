@@ -1,0 +1,99 @@
+# Copyright (C) 2026 Stefan Fambach
+# This file is distributed under the GPLv2 or later.
+msgid ""
+msgstr ""
+"Project-Id-Version: WP List of Sources 1.3.0\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2026-07-22 09:00+0000\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"Language: \n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"X-Domain: wp-list-of-sources\n"
+
+#: wp-list-of-sources.php
+msgid "Default"
+msgstr ""
+
+#: wp-list-of-sources.php
+msgid "Stripes"
+msgstr ""
+
+#: wp-list-of-sources.php
+msgid "No links found in this post."
+msgstr ""
+
+#: wp-list-of-sources.php
+msgid "No images found in this post."
+msgstr ""
+
+#: wp-list-of-sources.php
+msgid "No tables found in this post."
+msgstr ""
+
+#: wp-list-of-sources.php
+msgid "No files found in this post."
+msgstr ""
+
+#: wp-list-of-sources.php
+msgid "Table %d"
+msgstr ""
+
+#: wp-list-of-sources.php
+msgid "Live Preview (Template Mode)"
+msgstr ""
+
+#: wp-list-of-sources.php
+msgid "No content found to analyze."
+msgstr ""
+
+#: blocks.js
+msgid "List of Sources"
+msgstr ""
+
+#: blocks.js
+msgid "Links"
+msgstr ""
+
+#: blocks.js
+msgid "Images"
+msgstr ""
+
+#: blocks.js
+msgid "Tables"
+msgstr ""
+
+#: blocks.js
+msgid "Files"
+msgstr ""
+
+#: blocks.js
+msgid "Source Settings"
+msgstr ""
+
+#: blocks.js
+msgid "Source Type"
+msgstr ""
+
+#: blocks.js
+msgid "Display"
+msgstr ""
+
+#: blocks.js
+msgid "Display Format"
+msgstr ""
+
+#: blocks.js
+msgid "Table (Rows)"
+msgstr ""
+
+#: blocks.js
+msgid "Unordered List (Bullets)"
+msgstr ""
+
+#: blocks.js
+msgid "Remove http(s):// and www. from labels"
+msgstr ""

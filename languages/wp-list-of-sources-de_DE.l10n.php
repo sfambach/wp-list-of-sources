@@ -1,0 +1,28 @@
+<?php
+return [
+    'domain'   => 'wp-list-of-sources',
+    'locale'   => 'de_DE',
+    'messages' => [
+        'Default'                                  => 'Standard',
+        'Stripes'                                  => 'Streifen',
+        'No links found in this post.'             => 'Keine Links in diesem Beitrag gefunden.',
+        'No images found in this post.'            => 'Keine Bilder in diesem Beitrag gefunden.',
+        'No tables found in this post.'            => 'Keine Tabellen in diesem Beitrag gefunden.',
+        'No files found in this post.'             => 'Keine Dateien in diesem Beitrag gefunden.',
+        'Table %d'                                 => 'Tabelle %d',
+        'Live Preview (Template Mode)'             => 'Live-Vorschau (Vorlagenmodus)',
+        'No content found to analyze.'               => 'Kein Inhalt zum Analysieren gefunden.',
+        'List of Sources'                          => 'Quellenverzeichnis',
+        'Links'                                    => 'Links',
+        'Images'                                   => 'Bilder',
+        'Tables'                                   => 'Tabellen',
+        'Files'                                    => 'Dateien',
+        'Source Settings'                          => 'Quelleneinstellungen',
+        'Source Type'                              => 'Quellentyp',
+        'Display'                                  => 'Darstellung',
+        'Display Format'                           => 'Anzeigeformat',
+        'Table (Rows)'                             => 'Tabelle (Zeilen)',
+        'Unordered List (Bullets)'                 => 'Aufzählung (Bulletpoints)',
+        'Remove http(s):// and www. from labels'   => 'http(s):// und www. aus Beschriftungen entfernen',
+    ],
+];
