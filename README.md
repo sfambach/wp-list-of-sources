@@ -5,7 +5,7 @@ A WordPress Gutenberg block that automatically scans the current post and displa
 Pure JavaScript in the editor (no build step, no NPM). Server-side rendering in PHP.
 
 **Author:** Stefan Fambach  
-**Version:** 1.3.0  
+**Version:** 1.0.0  
 **License:** GPLv2 or later
 
 ## Features

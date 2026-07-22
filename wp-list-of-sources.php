@@ -2,7 +2,7 @@
 /**
  * Plugin Name: WP List of Sources
  * Description: Automatically extracts and displays links, images, tables, or files from the current post. Add one block per source type.
- * Version: 1.3.0
+ * Version: 1.0.0
  * Author: Stefan Fambach
  * Text Domain: wp-list-of-sources
  * Domain Path: /languages
