@@ -46,16 +46,16 @@ msgid "List of Sources"
 msgstr "Quellenverzeichnis"
 
 msgid "Links"
-msgstr "Links"
+msgstr "Linkverzeichnis"
 
 msgid "Images"
-msgstr "Bilder"
+msgstr "Bildverzeichnis"
 
 msgid "Tables"
-msgstr "Tabellen"
+msgstr "Tabellenverzeichnis"
 
 msgid "Files"
-msgstr "Dateien"
+msgstr "Dateiverzeichnis"
 
 msgid "Source Settings"
 msgstr "Quelleneinstellungen"

@@ -10,6 +10,81 @@
 
     var __ = i18n.__;
 
+    function flattenBlocks( blockList, acc ) {
+        acc = acc || [];
+        blockList.forEach( function( block ) {
+            acc.push( block );
+            if ( block.innerBlocks && block.innerBlocks.length ) {
+                flattenBlocks( block.innerBlocks, acc );
+            }
+        } );
+        return acc;
+    }
+
+    function getUrlFilename( url ) {
+        var clean = url.split( '?' )[ 0 ].split( '#' )[ 0 ];
+        try {
+            clean = decodeURIComponent( clean );
+        } catch ( e ) {}
+        var parts = clean.split( '/' );
+        return parts[ parts.length - 1 ] || '';
+    }
+
+    function blockMatchesUrl( block, url ) {
+        var attrs = block.attributes || {};
+        for ( var key in attrs ) {
+            if ( ! attrs.hasOwnProperty( key ) ) { continue; }
+            var value = attrs[ key ];
+            if ( typeof value !== 'string' || ! value ) { continue; }
+            if ( value === url ) { return true; }
+            if ( value.indexOf( url ) !== -1 &&
+                ( value.indexOf( 'href="' + url ) !== -1 ||
+                  value.indexOf( "href='" + url ) !== -1 ||
+                  value.indexOf( 'src="' + url ) !== -1 ||
+                  value.indexOf( "src='" + url ) !== -1 ) ) {
+                return true;
+            }
+        }
+
+        // Fallback: the block's stored attributes can drift from the actual
+        // markup (e.g. after replacing a media file). Match by filename
+        // against the block's serialized HTML instead of the exact URL.
+        var filename = getUrlFilename( url );
+        if ( filename ) {
+            var html = '';
+            try {
+                html = blocks.serialize( block );
+            } catch ( e ) {}
+            if ( html && html.toLowerCase().indexOf( filename.toLowerCase() ) !== -1 ) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    function findClientIdForUrl( url ) {
+        var blocks = data.select( 'core/block-editor' ).getBlocks();
+        var all    = flattenBlocks( blocks );
+        for ( var i = 0; i < all.length; i++ ) {
+            if ( blockMatchesUrl( all[ i ], url ) ) {
+                return all[ i ].clientId;
+            }
+        }
+        return null;
+    }
+
+    function jumpToBlock( clientId ) {
+        if ( ! clientId ) { return; }
+        data.dispatch( 'core/block-editor' ).selectBlock( clientId );
+        setTimeout( function() {
+            var node = document.querySelector( '[data-block="' + clientId + '"]' );
+            if ( node && node.scrollIntoView ) {
+                node.scrollIntoView( { behavior: 'smooth', block: 'center' } );
+            }
+        }, 50 );
+    }
+
     blocks.registerBlockType( 'wpls/sources-table', {
         title: __( 'List of Sources', 'wp-list-of-sources' ),
         icon: 'editor-table',
@@ -21,7 +96,7 @@
         },
         attributes: {
             sourceType: { type: 'string', default: 'links' },
-            displayFormat: { type: 'string', default: 'table' },
+            displayFormat: { type: 'string', default: 'list' },
             stripUrlPrefix: { type: 'boolean', default: true },
             align: { type: 'string', default: '' },
             className: { type: 'string', default: '' }
@@ -54,6 +129,26 @@
 
             var queryArgs = { trigger: refreshToken };
             if ( currentPostId ) { queryArgs.post_id = currentPostId; }
+
+            var previewRef = element.useRef( null );
+
+            useEffect( function() {
+                var container = previewRef.current;
+                if ( ! container ) { return; }
+
+                function handleClick( e ) {
+                    var button = e.target.closest ? e.target.closest( '.wpls-jump-button' ) : null;
+                    if ( ! button || ! container.contains( button ) ) { return; }
+                    e.preventDefault();
+                    var url = button.getAttribute( 'data-wpls-jump-url' );
+                    if ( url ) {
+                        jumpToBlock( findClientIdForUrl( url ) );
+                    }
+                }
+
+                container.addEventListener( 'click', handleClick );
+                return function() { container.removeEventListener( 'click', handleClick ); };
+            }, [ attributes, refreshToken ] );
 
             var sourceTypeOptions = [
                 { label: __( 'Links', 'wp-list-of-sources' ), value: 'links' },
@@ -98,7 +193,7 @@
                     )
                 ),
 
-                el( 'div', { key: 'preview' },
+                el( 'div', { key: 'preview', ref: previewRef },
                     el( wp.serverSideRender, {
                         block: 'wpls/sources-table',
                         attributes: attributes,

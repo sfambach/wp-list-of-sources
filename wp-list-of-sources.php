@@ -21,6 +21,131 @@ function wpls_load_textdomain() {
 }
 add_action( 'plugins_loaded', 'wpls_load_textdomain' );
 
+// ---------------------------------------------------------------------------
+// Settings
+// ---------------------------------------------------------------------------
+
+function wpls_get_default_settings() {
+    return [
+        'file_extensions' => implode( ', ', wpls_get_default_file_extensions() ),
+        'cache_duration'  => 12,
+        'display_format'  => 'list',
+    ];
+}
+
+function wpls_get_settings() {
+    $stored = get_option( 'wpls_settings', [] );
+    return wp_parse_args( $stored, wpls_get_default_settings() );
+}
+
+function wpls_register_settings() {
+    register_setting( 'wpls_settings_group', 'wpls_settings', [ 'sanitize_callback' => 'wpls_sanitize_settings' ] );
+}
+add_action( 'admin_init', 'wpls_register_settings' );
+
+function wpls_sanitize_settings( $input ) {
+    $defaults = wpls_get_default_settings();
+    $output   = [];
+
+    $extensions = isset( $input['file_extensions'] ) ? (string) $input['file_extensions'] : '';
+    $extensions = array_filter( array_map( 'trim', explode( ',', strtolower( $extensions ) ) ) );
+    $extensions = array_map(
+        function ( $ext ) {
+            return preg_replace( '/[^a-z0-9]/', '', $ext );
+        },
+        $extensions
+    );
+    $extensions            = array_filter( $extensions );
+    $output['file_extensions'] = ! empty( $extensions ) ? implode( ', ', $extensions ) : $defaults['file_extensions'];
+
+    $duration                = isset( $input['cache_duration'] ) ? intval( $input['cache_duration'] ) : $defaults['cache_duration'];
+    $output['cache_duration'] = $duration > 0 ? $duration : $defaults['cache_duration'];
+
+    $display_format         = isset( $input['display_format'] ) ? (string) $input['display_format'] : $defaults['display_format'];
+    $output['display_format'] = in_array( $display_format, [ 'table', 'list' ], true ) ? $display_format : $defaults['display_format'];
+
+    return $output;
+}
+
+function wpls_add_settings_page() {
+    add_options_page(
+        __( 'List of Sources', 'wp-list-of-sources' ),
+        __( 'List of Sources', 'wp-list-of-sources' ),
+        'manage_options',
+        'wpls-settings',
+        'wpls_render_settings_page'
+    );
+}
+add_action( 'admin_menu', 'wpls_add_settings_page' );
+
+function wpls_render_settings_page() {
+    if ( ! current_user_can( 'manage_options' ) ) {
+        return;
+    }
+
+    $settings = wpls_get_settings();
+    ?>
+    <div class="wrap">
+        <h1><?php esc_html_e( 'List of Sources', 'wp-list-of-sources' ); ?></h1>
+        <form method="post" action="options.php">
+            <?php settings_fields( 'wpls_settings_group' ); ?>
+            <table class="form-table" role="presentation">
+                <tr>
+                    <th scope="row">
+                        <label for="wpls_file_extensions"><?php esc_html_e( 'File extensions', 'wp-list-of-sources' ); ?></label>
+                    </th>
+                    <td>
+                        <input
+                            type="text"
+                            id="wpls_file_extensions"
+                            name="wpls_settings[file_extensions]"
+                            value="<?php echo esc_attr( $settings['file_extensions'] ); ?>"
+                            class="regular-text"
+                        />
+                        <p class="description">
+                            <?php esc_html_e( 'Comma-separated list of file extensions treated as the "Files" source type.', 'wp-list-of-sources' ); ?>
+                        </p>
+                    </td>
+                </tr>
+                <tr>
+                    <th scope="row">
+                        <label for="wpls_cache_duration"><?php esc_html_e( 'Cache duration (hours)', 'wp-list-of-sources' ); ?></label>
+                    </th>
+                    <td>
+                        <input
+                            type="number"
+                            min="1"
+                            id="wpls_cache_duration"
+                            name="wpls_settings[cache_duration]"
+                            value="<?php echo esc_attr( $settings['cache_duration'] ); ?>"
+                            class="small-text"
+                        />
+                        <p class="description">
+                            <?php esc_html_e( 'How long a rendered block is cached before it is rebuilt from post content.', 'wp-list-of-sources' ); ?>
+                        </p>
+                    </td>
+                </tr>
+                <tr>
+                    <th scope="row">
+                        <label for="wpls_display_format"><?php esc_html_e( 'Default display format', 'wp-list-of-sources' ); ?></label>
+                    </th>
+                    <td>
+                        <select id="wpls_display_format" name="wpls_settings[display_format]">
+                            <option value="list" <?php selected( $settings['display_format'], 'list' ); ?>><?php esc_html_e( 'List', 'wp-list-of-sources' ); ?></option>
+                            <option value="table" <?php selected( $settings['display_format'], 'table' ); ?>><?php esc_html_e( 'Table', 'wp-list-of-sources' ); ?></option>
+                        </select>
+                        <p class="description">
+                            <?php esc_html_e( 'Default display format for newly inserted blocks.', 'wp-list-of-sources' ); ?>
+                        </p>
+                    </td>
+                </tr>
+            </table>
+            <?php submit_button(); ?>
+        </form>
+    </div>
+    <?php
+}
+
 function wpls_editor_styles() {
     echo '<style>
         .wpls-minimal-input .components-base-control__field { margin-bottom: 0 !important; }
@@ -28,6 +153,11 @@ function wpls_editor_styles() {
         .wpls-minimal-input select.components-select-control__input {
             height: 28px !important; min-height: 28px !important; padding: 2px 8px !important; font-size: 13px !important;
         }
+        .wpls-jump-button {
+            background: none; border: 1px solid #ccc; border-radius: 3px; cursor: pointer;
+            font-size: 12px; line-height: 1; padding: 1px 5px; vertical-align: middle; color: #555;
+        }
+        .wpls-jump-button:hover { background: #f0f0f0; }
     </style>';
 }
 add_action( 'admin_head', 'wpls_editor_styles' );
@@ -42,6 +172,8 @@ function wpls_frontend_styles() {
 add_action( 'wp_head', 'wpls_frontend_styles' );
 
 function wpls_register_sources_blocks() {
+    $settings = wpls_get_settings();
+
     register_block_type(
         'wpls/sources-table',
         [
@@ -49,7 +181,7 @@ function wpls_register_sources_blocks() {
             'render_callback' => 'wpls_render_sources_table',
             'attributes'      => [
                 'sourceType'     => [ 'type' => 'string', 'default' => 'links' ],
-                'displayFormat'  => [ 'type' => 'string', 'default' => 'table' ],
+                'displayFormat'  => [ 'type' => 'string', 'default' => $settings['display_format'] ],
                 'stripUrlPrefix' => [ 'type' => 'boolean', 'default' => true ],
                 'align'          => [ 'type' => 'string', 'default' => '' ],
                 'className'      => [ 'type' => 'string', 'default' => '' ],
@@ -131,8 +263,15 @@ function wpls_get_source_types() {
     return [ 'links', 'images', 'tables', 'files' ];
 }
 
+function wpls_get_default_file_extensions() {
+    return [ 'pdf', 'doc', 'docx', 'xls', 'xlsx', 'ppt', 'pptx', 'zip', 'rar', '7z', 'csv', 'txt', 'bin' ];
+}
+
 function wpls_get_file_extensions() {
-    return [ 'pdf', 'doc', 'docx', 'xls', 'xlsx', 'ppt', 'pptx', 'zip', 'rar', '7z', 'csv', 'txt' ];
+    $settings = wpls_get_settings();
+    $list     = array_filter( array_map( 'trim', explode( ',', $settings['file_extensions'] ) ) );
+
+    return ! empty( $list ) ? $list : wpls_get_default_file_extensions();
 }
 
 function wpls_get_clean_domain_and_path( $url ) {
@@ -180,6 +319,25 @@ function wpls_filter_unique_urls( $sources_array ) {
 function wpls_finalize_source_list( array $items ) {
     usort( $items, 'wpls_sort_sources' );
     return wpls_filter_unique_urls( $items );
+}
+
+function wpls_get_figcaption_text( DOMNode $node ) {
+    $figure = $node->parentNode;
+
+    while ( $figure && $figure->nodeName !== 'figure' ) {
+        if ( in_array( $figure->nodeName, [ 'table', 'td', 'tr', 'tbody', 'thead' ], true ) ) {
+            return '';
+        }
+        $figure = $figure->parentNode;
+    }
+
+    if ( ! $figure ) {
+        return '';
+    }
+
+    $figcaptions = $figure->getElementsByTagName( 'figcaption' );
+
+    return $figcaptions->length > 0 ? trim( $figcaptions->item( 0 )->textContent ) : '';
 }
 
 function wpls_is_file_url( $url ) {
@@ -256,11 +414,20 @@ function wpls_build_anchor_entry( DOMElement $link, $strip_url_prefix, $as_file 
         return null;
     }
 
+    if ( ! $as_file && $link->getElementsByTagName( 'img' )->length > 0 ) {
+        return null;
+    }
+
     $path_only      = parse_url( $url, PHP_URL_PATH );
     $has_real_title = false;
 
     if ( $as_file ) {
-        if ( ! empty( $title ) ) {
+        $caption = wpls_get_figcaption_text( $link );
+
+        if ( ! empty( $caption ) ) {
+            $final_title    = $caption;
+            $has_real_title = true;
+        } elseif ( ! empty( $title ) ) {
             $final_title    = $title;
             $has_real_title = true;
         } else {
@@ -321,9 +488,10 @@ function wpls_collect_images_data( DOMDocument $dom ) {
     $data = [];
 
     foreach ( $dom->getElementsByTagName( 'img' ) as $img ) {
-        $url   = $img->getAttribute( 'src' );
-        $alt   = trim( $img->getAttribute( 'alt' ) );
-        $title = trim( $img->getAttribute( 'title' ) );
+        $url       = $img->getAttribute( 'src' );
+        $alt       = trim( $img->getAttribute( 'alt' ) );
+        $title     = trim( $img->getAttribute( 'title' ) );
+        $caption   = wpls_get_figcaption_text( $img );
 
         if ( empty( $url ) ) {
             continue;
@@ -331,14 +499,17 @@ function wpls_collect_images_data( DOMDocument $dom ) {
 
         $has_real_title = false;
 
-        if ( empty( $alt ) && empty( $title ) ) {
+        if ( ! empty( $caption ) ) {
+            $final_title    = $caption;
+            $has_real_title = true;
+        } elseif ( ! empty( $alt ) || ! empty( $title ) ) {
+            $final_title    = ! empty( $alt ) ? $alt : $title;
+            $has_real_title = true;
+        } else {
             $final_title = basename( parse_url( $url, PHP_URL_PATH ) );
             if ( empty( $final_title ) ) {
                 $final_title = $url;
             }
-        } else {
-            $final_title    = ! empty( $alt ) ? $alt : $title;
-            $has_real_title = true;
         }
 
         $data[] = [
@@ -408,11 +579,21 @@ function wpls_collect_source_data( $source_type, DOMDocument $dom, $strip_url_pr
 // Rendering
 // ---------------------------------------------------------------------------
 
-function wpls_render_url_source_item( array $item ) {
-    return sprintf(
+function wpls_render_url_source_item( array $item, $is_editor_preview = false ) {
+    $link = sprintf(
         '<a href="%s" target="_blank" rel="noopener">%s</a>',
         $item['url'],
         $item['title']
+    );
+
+    if ( ! $is_editor_preview ) {
+        return $link;
+    }
+
+    return $link . sprintf(
+        ' <button type="button" class="wpls-jump-button" data-wpls-jump-url="%s" title="%s">&#8635;</button>',
+        esc_attr( $item['url'] ),
+        esc_attr__( 'Zum Block im Editor springen', 'wp-list-of-sources' )
     );
 }
 
@@ -430,15 +611,15 @@ function wpls_render_table_source_item( array $item, $index ) {
     return sprintf( '<a href="#%s">%s</a>', $final_anchor, $item['title'] );
 }
 
-function wpls_render_source_item( $source_type, array $item, $index ) {
+function wpls_render_source_item( $source_type, array $item, $index, $is_editor_preview = false ) {
     if ( $source_type === 'tables' ) {
         return wpls_render_table_source_item( $item, $index );
     }
 
-    return wpls_render_url_source_item( $item );
+    return wpls_render_url_source_item( $item, $is_editor_preview );
 }
 
-function wpls_render_source_items( $source_type, array $data, $display_format, $table_style_class ) {
+function wpls_render_source_items( $source_type, array $data, $display_format, $table_style_class, $is_editor_preview = false ) {
     if ( empty( $data ) ) {
         return sprintf(
             '<p style="font-style:italic; color:#888; margin:0;">%s</p>',
@@ -453,7 +634,7 @@ function wpls_render_source_items( $source_type, array $data, $display_format, $
         foreach ( $data as $index => $item ) {
             $output .= sprintf(
                 '<li style="margin-bottom:5px;">%s</li>',
-                wpls_render_source_item( $source_type, $item, $index )
+                wpls_render_source_item( $source_type, $item, $index, $is_editor_preview )
             );
         }
         $output .= '</ul>';
@@ -462,7 +643,7 @@ function wpls_render_source_items( $source_type, array $data, $display_format, $
         foreach ( $data as $index => $item ) {
             $output .= sprintf(
                 '<tr><td>%s</td></tr>',
-                wpls_render_source_item( $source_type, $item, $index )
+                wpls_render_source_item( $source_type, $item, $index, $is_editor_preview )
             );
         }
         $output .= '</tbody></table>';
@@ -471,36 +652,36 @@ function wpls_render_source_items( $source_type, array $data, $display_format, $
     return $output;
 }
 
-function wpls_render_links_source( array $data, $display_format, $table_style_class ) {
-    return wpls_render_source_items( 'links', $data, $display_format, $table_style_class );
+function wpls_render_links_source( array $data, $display_format, $table_style_class, $is_editor_preview = false ) {
+    return wpls_render_source_items( 'links', $data, $display_format, $table_style_class, $is_editor_preview );
 }
 
-function wpls_render_images_source( array $data, $display_format, $table_style_class ) {
-    return wpls_render_source_items( 'images', $data, $display_format, $table_style_class );
+function wpls_render_images_source( array $data, $display_format, $table_style_class, $is_editor_preview = false ) {
+    return wpls_render_source_items( 'images', $data, $display_format, $table_style_class, $is_editor_preview );
 }
 
-function wpls_render_tables_source( array $data, $display_format, $table_style_class ) {
-    return wpls_render_source_items( 'tables', $data, $display_format, $table_style_class );
+function wpls_render_tables_source( array $data, $display_format, $table_style_class, $is_editor_preview = false ) {
+    return wpls_render_source_items( 'tables', $data, $display_format, $table_style_class, $is_editor_preview );
 }
 
-function wpls_render_files_source( array $data, $display_format, $table_style_class ) {
-    return wpls_render_source_items( 'files', $data, $display_format, $table_style_class );
+function wpls_render_files_source( array $data, $display_format, $table_style_class, $is_editor_preview = false ) {
+    return wpls_render_source_items( 'files', $data, $display_format, $table_style_class, $is_editor_preview );
 }
 
-function wpls_render_source_block( $source_type, array $data, $display_format, $table_style_class, $wrapper_class_str ) {
+function wpls_render_source_block( $source_type, array $data, $display_format, $table_style_class, $wrapper_class_str, $is_editor_preview = false ) {
     switch ( $source_type ) {
         case 'images':
-            $content = wpls_render_images_source( $data, $display_format, $table_style_class );
+            $content = wpls_render_images_source( $data, $display_format, $table_style_class, $is_editor_preview );
             break;
         case 'tables':
-            $content = wpls_render_tables_source( $data, $display_format, $table_style_class );
+            $content = wpls_render_tables_source( $data, $display_format, $table_style_class, $is_editor_preview );
             break;
         case 'files':
-            $content = wpls_render_files_source( $data, $display_format, $table_style_class );
+            $content = wpls_render_files_source( $data, $display_format, $table_style_class, $is_editor_preview );
             break;
         case 'links':
         default:
-            $content = wpls_render_links_source( $data, $display_format, $table_style_class );
+            $content = wpls_render_links_source( $data, $display_format, $table_style_class, $is_editor_preview );
             break;
     }
 
@@ -559,9 +740,11 @@ function wpls_render_sources_table( $attributes, $content ) {
 
     $post                = $post_id ? get_post( $post_id ) : null;
     $is_template_preview = ( ! $post || $post->post_type === 'wp_block' || $post->post_type === 'wp_template' || $post_id === 0 );
+    $is_editor_preview   = ( defined( 'REST_REQUEST' ) && REST_REQUEST );
 
+    $settings         = wpls_get_settings();
     $source_type      = wpls_sanitize_source_type( ! empty( $attributes['sourceType'] ) ? $attributes['sourceType'] : 'links' );
-    $display_format   = ! empty( $attributes['displayFormat'] ) ? $attributes['displayFormat'] : 'table';
+    $display_format   = ! empty( $attributes['displayFormat'] ) ? $attributes['displayFormat'] : $settings['display_format'];
     $strip_url_prefix = array_key_exists( 'stripUrlPrefix', $attributes ) ? (bool) $attributes['stripUrlPrefix'] : true;
     $wrapper_class    = wpls_get_wrapper_class_string( $attributes );
     $table_style      = wpls_get_table_style_class( $attributes );
@@ -575,10 +758,13 @@ function wpls_render_sources_table( $attributes, $content ) {
         $content_version = '0';
     }
 
-    $cache_key     = 'wpls_cache_' . $post_id . '_' . $content_version . '_' . md5( serialize( $attributes ) );
-    $cached_output = get_transient( $cache_key );
-    if ( $cached_output !== false ) {
-        return $cached_output;
+    $cache_key = 'wpls_cache_' . $post_id . '_' . $content_version . '_' . md5( serialize( $attributes ) . serialize( $settings ) );
+
+    if ( ! $is_editor_preview ) {
+        $cached_output = get_transient( $cache_key );
+        if ( $cached_output !== false ) {
+            return $cached_output;
+        }
     }
 
     $html = $post->post_content;
@@ -588,9 +774,13 @@ function wpls_render_sources_table( $attributes, $content ) {
 
     $dom  = wpls_create_dom_from_html( $html );
     $data = wpls_collect_source_data( $source_type, $dom, $strip_url_prefix );
-    $output = wpls_render_source_block( $source_type, $data, $display_format, $table_style, $wrapper_class );
+    $output = wpls_render_source_block( $source_type, $data, $display_format, $table_style, $wrapper_class, $is_editor_preview );
 
-    set_transient( $cache_key, $output, 12 * HOUR_IN_SECONDS );
+    if ( $is_editor_preview ) {
+        return $output;
+    }
+
+    set_transient( $cache_key, $output, intval( $settings['cache_duration'] ) * HOUR_IN_SECONDS );
 
     return $output;
 }
