@@ -5,7 +5,7 @@ A WordPress Gutenberg block that automatically scans the current post and displa
 Pure JavaScript in the editor (no build step, no NPM). Server-side rendering in PHP.
 
 **Author:** Stefan Fambach  
-**Version:** 1.0.0  
+**Version:** 1.0.1  
 **License:** GPLv2 or later
 
 ## Features
@@ -14,7 +14,7 @@ Pure JavaScript in the editor (no build step, no NPM). Server-side rendering in 
 - **Table or bullet list** output
 - **Optional URL cleanup** — remove `http(s)://` and `www.` from link labels
 - **Block styles** — Default and Stripes table style
-- **Smart titles** — uses link text, alt text, captions, or filenames where available
+- **Smart titles** — uses link text, image title (media library), captions, alt text, or filenames where available
 - **Table anchors** — table entries link to anchors in the post content
 - **Caching** — output is cached and invalidated on save
 - **i18n ready** — English strings with German translation included
@@ -53,9 +53,11 @@ It does not refresh on every keystroke while editing content.
 |-----------------|----------|
 | Image block (Insert from URL) | **Images** |
 | Text link to a URL | **Links** |
-| Link to PDF / DOC / ZIP | **Files** |
+| Link to PDF / DOC / ZIP in text | **Files** |
+| File block | **Files** |
+| Any link inside an image, gallery, media & text or cover block | not in **Links** |
 | Table block | **Tables** |
-| Linked image (`<a><img></a>`) | **Images** and possibly **Links** |
+| Linked image (`<a><img></a>`) | **Images** |
 
 ## File structure
 

@@ -2,10 +2,12 @@
 /**
  * Plugin Name: WP List of Sources
  * Description: Automatically extracts and displays links, images, tables, or files from the current post. Add one block per source type.
- * Version: 1.0.0
+ * Version: 1.0.1
  * Author: Stefan Fambach
  * Text Domain: wp-list-of-sources
  * Domain Path: /languages
+ * GitHub Plugin URI: sfambach/wp-list-of-sources
+ * Primary Branch: main
  */
 
 if ( ! defined( 'ABSPATH' ) ) {
@@ -362,6 +364,78 @@ function wpls_create_dom_from_html( $html ) {
     return $dom;
 }
 
+function wpls_get_image_block_names() {
+    return apply_filters( 'wpls_image_block_names', [ 'core/image', 'core/gallery', 'core/media-text', 'core/cover' ] );
+}
+
+function wpls_get_file_block_names() {
+    return apply_filters( 'wpls_file_block_names', [ 'core/file' ] );
+}
+
+function wpls_get_block_html( array $block ) {
+    $html  = '';
+    $index = 0;
+
+    foreach ( $block['innerContent'] as $chunk ) {
+        if ( is_string( $chunk ) ) {
+            $html .= $chunk;
+        } elseif ( isset( $block['innerBlocks'][ $index ] ) ) {
+            $html .= wpls_get_block_html( $block['innerBlocks'][ $index++ ] );
+        }
+    }
+
+    return $html;
+}
+
+function wpls_split_blocks_by_type( array $blocks, array &$buckets ) {
+    foreach ( $blocks as $block ) {
+        $name = isset( $block['blockName'] ) ? $block['blockName'] : '';
+
+        if ( in_array( $name, wpls_get_image_block_names(), true ) ) {
+            $buckets['images'] .= wpls_get_block_html( $block );
+            continue;
+        }
+        if ( in_array( $name, wpls_get_file_block_names(), true ) ) {
+            $buckets['files'] .= wpls_get_block_html( $block );
+            continue;
+        }
+
+        $index = 0;
+        foreach ( $block['innerContent'] as $chunk ) {
+            if ( is_string( $chunk ) ) {
+                $buckets['other'] .= $chunk;
+            } elseif ( isset( $block['innerBlocks'][ $index ] ) ) {
+                wpls_split_blocks_by_type( [ $block['innerBlocks'][ $index++ ] ], $buckets );
+            }
+        }
+    }
+}
+
+/**
+ * Splits post content into HTML of image blocks, file blocks and everything else.
+ * Classic content without blocks ends up completely in "other".
+ */
+function wpls_split_content_by_block( $content ) {
+    $buckets = [ 'images' => '', 'files' => '', 'other' => '' ];
+
+    if ( ! has_blocks( $content ) ) {
+        $buckets['other'] = $content;
+        return $buckets;
+    }
+
+    wpls_split_blocks_by_type( parse_blocks( $content ), $buckets );
+
+    return $buckets;
+}
+
+function wpls_get_attachment_id_from_img( DOMElement $img ) {
+    if ( preg_match( '/\bwp-image-(\d+)\b/', $img->getAttribute( 'class' ), $matches ) ) {
+        return (int) $matches[1];
+    }
+
+    return (int) $img->getAttribute( 'data-id' );
+}
+
 function wpls_sanitize_source_type( $source_type ) {
     $allowed = wpls_get_source_types();
     return in_array( $source_type, $allowed, true ) ? $source_type : 'links';
@@ -401,7 +475,7 @@ function wpls_get_table_style_class( array $attributes ) {
 // Data collection
 // ---------------------------------------------------------------------------
 
-function wpls_build_anchor_entry( DOMElement $link, $strip_url_prefix, $as_file ) {
+function wpls_build_anchor_entry( DOMElement $link, $strip_url_prefix, $as_file, $from_file_block = false ) {
     $url  = $link->getAttribute( 'href' );
     $title = trim( $link->getAttribute( 'title' ) );
     $text  = trim( $link->textContent );
@@ -410,7 +484,7 @@ function wpls_build_anchor_entry( DOMElement $link, $strip_url_prefix, $as_file 
         return null;
     }
 
-    if ( wpls_is_file_url( $url ) !== $as_file ) {
+    if ( ! $from_file_block && wpls_is_file_url( $url ) !== $as_file ) {
         return null;
     }
 
@@ -429,6 +503,9 @@ function wpls_build_anchor_entry( DOMElement $link, $strip_url_prefix, $as_file 
             $has_real_title = true;
         } elseif ( ! empty( $title ) ) {
             $final_title    = $title;
+            $has_real_title = true;
+        } elseif ( $from_file_block && ! empty( $text ) ) {
+            $final_title    = $text;
             $has_real_title = true;
         } else {
             $filename    = $path_only ? urldecode( basename( $path_only ) ) : '';
@@ -471,10 +548,20 @@ function wpls_collect_links_data( DOMDocument $dom, $strip_url_prefix ) {
     return wpls_finalize_source_list( $data );
 }
 
-function wpls_collect_files_data( DOMDocument $dom, $strip_url_prefix ) {
+function wpls_collect_files_data( DOMDocument $file_blocks_dom, DOMDocument $other_dom, $strip_url_prefix ) {
     $data = [];
 
-    foreach ( $dom->getElementsByTagName( 'a' ) as $link ) {
+    foreach ( $file_blocks_dom->getElementsByTagName( 'a' ) as $link ) {
+        if ( strpos( ' ' . $link->getAttribute( 'class' ) . ' ', ' wp-block-file__button ' ) !== false ) {
+            continue;
+        }
+        $entry = wpls_build_anchor_entry( $link, $strip_url_prefix, true, true );
+        if ( $entry ) {
+            $data[] = $entry;
+        }
+    }
+
+    foreach ( $other_dom->getElementsByTagName( 'a' ) as $link ) {
         $entry = wpls_build_anchor_entry( $link, $strip_url_prefix, true );
         if ( $entry ) {
             $data[] = $entry;
@@ -498,12 +585,20 @@ function wpls_collect_images_data( DOMDocument $dom ) {
         }
 
         $has_real_title = false;
+        $attachment_id  = wpls_get_attachment_id_from_img( $img );
 
-        if ( ! empty( $caption ) ) {
+        if ( empty( $title ) && $attachment_id > 0 ) {
+            $title = trim( get_the_title( $attachment_id ) );
+        }
+
+        if ( ! empty( $title ) ) {
+            $final_title    = $title;
+            $has_real_title = true;
+        } elseif ( ! empty( $caption ) ) {
             $final_title    = $caption;
             $has_real_title = true;
-        } elseif ( ! empty( $alt ) || ! empty( $title ) ) {
-            $final_title    = ! empty( $alt ) ? $alt : $title;
+        } elseif ( ! empty( $alt ) ) {
+            $final_title    = $alt;
             $has_real_title = true;
         } else {
             $final_title = basename( parse_url( $url, PHP_URL_PATH ) );
@@ -561,18 +656,22 @@ function wpls_collect_tables_data( DOMDocument $dom ) {
     return $data;
 }
 
-function wpls_collect_source_data( $source_type, DOMDocument $dom, $strip_url_prefix ) {
+function wpls_collect_source_data( $source_type, $html, $strip_url_prefix ) {
     switch ( $source_type ) {
         case 'images':
-            return wpls_collect_images_data( $dom );
+            return wpls_collect_images_data( wpls_create_dom_from_html( $html ) );
         case 'tables':
-            return wpls_collect_tables_data( $dom );
-        case 'files':
-            return wpls_collect_files_data( $dom, $strip_url_prefix );
-        case 'links':
-        default:
-            return wpls_collect_links_data( $dom, $strip_url_prefix );
+            return wpls_collect_tables_data( wpls_create_dom_from_html( $html ) );
     }
+
+    $buckets   = wpls_split_content_by_block( $html );
+    $other_dom = wpls_create_dom_from_html( $buckets['other'] );
+
+    if ( $source_type === 'files' ) {
+        return wpls_collect_files_data( wpls_create_dom_from_html( $buckets['files'] ), $other_dom, $strip_url_prefix );
+    }
+
+    return wpls_collect_links_data( $other_dom, $strip_url_prefix );
 }
 
 // ---------------------------------------------------------------------------
@@ -772,8 +871,7 @@ function wpls_render_sources_table( $attributes, $content ) {
         return '<p style="font-style:italic; color:#666;">' . esc_html__( 'No content found to analyze.', 'wp-list-of-sources' ) . '</p>';
     }
 
-    $dom  = wpls_create_dom_from_html( $html );
-    $data = wpls_collect_source_data( $source_type, $dom, $strip_url_prefix );
+    $data   = wpls_collect_source_data( $source_type, $html, $strip_url_prefix );
     $output = wpls_render_source_block( $source_type, $data, $display_format, $table_style, $wrapper_class, $is_editor_preview );
 
     if ( $is_editor_preview ) {
