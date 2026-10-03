@@ -6,6 +6,8 @@
  * Author: Stefan Fambach
  * Text Domain: wp-list-of-sources
  * Domain Path: /languages
+ * GitHub Plugin URI: sfambach/wp-list-of-sources
+ * Primary Branch: main
  */
 
 if ( ! defined( 'ABSPATH' ) ) {
