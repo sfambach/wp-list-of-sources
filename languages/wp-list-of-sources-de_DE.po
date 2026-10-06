@@ -77,3 +77,27 @@ msgstr "Aufzählung (Bulletpoints)"
 
 msgid "Remove http(s):// and www. from labels"
 msgstr "http(s):// und www. aus Beschriftungen entfernen"
+
+#: blocks.js
+msgid "Additional Sources"
+msgstr "Weitere Quellen"
+
+#: blocks.js
+msgid "Sources that are not linked in the text. Not shown on the page, only in the List of Sources."
+msgstr "Quellen, die nicht im Text verlinkt sind. Erscheinen nicht auf der Seite, nur im Quellenverzeichnis."
+
+#: blocks.js
+msgid "URL"
+msgstr "URL"
+
+#: blocks.js
+msgid "Title"
+msgstr "Titel"
+
+#: blocks.js
+msgid "Remove source"
+msgstr "Quelle entfernen"
+
+#: blocks.js
+msgid "Add source"
+msgstr "Quelle hinzufügen"

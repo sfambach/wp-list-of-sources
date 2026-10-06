@@ -97,3 +97,27 @@ msgstr ""
 #: blocks.js
 msgid "Remove http(s):// and www. from labels"
 msgstr ""
+
+#: blocks.js
+msgid "Additional Sources"
+msgstr ""
+
+#: blocks.js
+msgid "Sources that are not linked in the text. Not shown on the page, only in the List of Sources."
+msgstr ""
+
+#: blocks.js
+msgid "URL"
+msgstr ""
+
+#: blocks.js
+msgid "Title"
+msgstr ""
+
+#: blocks.js
+msgid "Remove source"
+msgstr ""
+
+#: blocks.js
+msgid "Add source"
+msgstr ""
