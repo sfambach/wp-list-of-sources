@@ -7,18 +7,60 @@
                 "lang": "de_DE",
                 "plural_forms": "nplurals=2; plural=(n != 1);"
             },
-            "List of Sources": [ "Quellenverzeichnis" ],
-            "Links": [ "Linkverzeichnis" ],
-            "Images": [ "Bildverzeichnis" ],
-            "Tables": [ "Tabellenverzeichnis" ],
-            "Files": [ "Dateiverzeichnis" ],
-            "Source Settings": [ "Quelleneinstellungen" ],
-            "Source Type": [ "Quellentyp" ],
-            "Display": [ "Darstellung" ],
-            "Display Format": [ "Anzeigeformat" ],
-            "Table (Rows)": [ "Tabelle (Zeilen)" ],
-            "Unordered List (Bullets)": [ "Aufzählung (Bulletpoints)" ],
-            "Remove http(s):// and www. from labels": [ "http(s):// und www. aus Beschriftungen entfernen" ]
+            "List of Sources": [
+                "Quellenverzeichnis"
+            ],
+            "Links": [
+                "Linkverzeichnis"
+            ],
+            "Images": [
+                "Bildverzeichnis"
+            ],
+            "Tables": [
+                "Tabellenverzeichnis"
+            ],
+            "Files": [
+                "Dateiverzeichnis"
+            ],
+            "Source Settings": [
+                "Quelleneinstellungen"
+            ],
+            "Source Type": [
+                "Quellentyp"
+            ],
+            "Display": [
+                "Darstellung"
+            ],
+            "Display Format": [
+                "Anzeigeformat"
+            ],
+            "Table (Rows)": [
+                "Tabelle (Zeilen)"
+            ],
+            "Unordered List (Bullets)": [
+                "Aufzählung (Bulletpoints)"
+            ],
+            "Remove http(s):// and www. from labels": [
+                "http(s):// und www. aus Beschriftungen entfernen"
+            ],
+            "Additional Sources": [
+                "Weitere Quellen"
+            ],
+            "Sources that are not linked in the text. Not shown on the page, only in the List of Sources.": [
+                "Quellen, die nicht im Text verlinkt sind. Erscheinen nicht auf der Seite, nur im Quellenverzeichnis."
+            ],
+            "URL": [
+                "URL"
+            ],
+            "Title": [
+                "Titel"
+            ],
+            "Remove source": [
+                "Quelle entfernen"
+            ],
+            "Add source": [
+                "Quelle hinzufügen"
+            ]
         }
     }
 }

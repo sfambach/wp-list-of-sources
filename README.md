@@ -5,7 +5,7 @@ A WordPress Gutenberg block that automatically scans the current post and displa
 Pure JavaScript in the editor (no build step, no NPM). Server-side rendering in PHP.
 
 **Author:** Stefan Fambach  
-**Version:** 1.0.2  
+**Version:** 1.1.0  
 **License:** GPLv2 or later
 
 ## Features
@@ -36,6 +36,10 @@ Pure JavaScript in the editor (no build step, no NPM). Server-side rendering in 
 3. Under **Display**, choose table or bullet list and URL label options
 
 To show more than one source type, add **multiple blocks** — one per type.
+
+### Additional sources
+
+Sources that are not linked in the text (e.g. pages used for research) can be added with the **Additional Sources** block anywhere in the post. Enter URL and optional title per row. The block is not shown on the page; its entries appear in the Links list (file URLs such as PDFs in the Files list), merged and de-duplicated with the links found in the content. This also works when the List of Sources block sits in the post template.
 
 ### Editor preview
 

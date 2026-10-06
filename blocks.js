@@ -32,6 +32,9 @@
 
     function blockMatchesUrl( block, url ) {
         var attrs = block.attributes || {};
+        if ( Array.isArray( attrs.links ) && attrs.links.some( function( link ) { return link && link.url === url; } ) ) {
+            return true;
+        }
         for ( var key in attrs ) {
             if ( ! attrs.hasOwnProperty( key ) ) { continue; }
             var value = attrs[ key ];
@@ -201,6 +204,76 @@
                     } )
                 )
             ];
+        },
+        save: function() { return null; }
+    } );
+
+    blocks.registerBlockType( 'wpls/extra-sources', {
+        title: __( 'Additional Sources', 'wp-list-of-sources' ),
+        description: __( 'Sources that are not linked in the text. Not shown on the page, only in the List of Sources.', 'wp-list-of-sources' ),
+        icon: 'admin-links',
+        category: 'common',
+        supports: { html: false },
+        attributes: {
+            links: { type: 'array', default: [] }
+        },
+        edit: function( props ) {
+            var links = props.attributes.links || [];
+            var TextControl = components.TextControl;
+            var Button = components.Button;
+
+            function update( index, key, value ) {
+                var next = links.map( function( link, i ) {
+                    if ( i !== index ) { return link; }
+                    var copy = { url: link.url || '', title: link.title || '' };
+                    copy[ key ] = value;
+                    return copy;
+                } );
+                props.setAttributes( { links: next } );
+            }
+
+            function remove( index ) {
+                props.setAttributes( { links: links.filter( function( link, i ) { return i !== index; } ) } );
+            }
+
+            function add() {
+                props.setAttributes( { links: links.concat( [ { url: '', title: '' } ] ) } );
+            }
+
+            return el( 'div', { className: 'wpls-extra-sources', style: { border: '1px dashed #ccc', padding: '12px', background: '#fafafa' } },
+                el( 'strong', { style: { display: 'block', marginBottom: '4px' } }, __( 'Additional Sources', 'wp-list-of-sources' ) ),
+                el( 'p', { style: { fontSize: '12px', color: '#757575', margin: '0 0 8px' } },
+                    __( 'Sources that are not linked in the text. Not shown on the page, only in the List of Sources.', 'wp-list-of-sources' )
+                ),
+                links.map( function( link, index ) {
+                    return el( 'div', { key: index, style: { display: 'flex', gap: '8px', alignItems: 'flex-end', marginBottom: '8px' } },
+                        el( 'div', { style: { flex: '2' } },
+                            el( TextControl, {
+                                label: __( 'URL', 'wp-list-of-sources' ),
+                                type: 'url',
+                                value: link.url || '',
+                                onChange: function( value ) { update( index, 'url', value ); },
+                                __nextHasNoMarginBottom: true
+                            } )
+                        ),
+                        el( 'div', { style: { flex: '2' } },
+                            el( TextControl, {
+                                label: __( 'Title', 'wp-list-of-sources' ),
+                                value: link.title || '',
+                                onChange: function( value ) { update( index, 'title', value ); },
+                                __nextHasNoMarginBottom: true
+                            } )
+                        ),
+                        el( Button, {
+                            icon: 'trash',
+                            label: __( 'Remove source', 'wp-list-of-sources' ),
+                            isDestructive: true,
+                            onClick: function() { remove( index ); }
+                        } )
+                    );
+                } ),
+                el( Button, { variant: 'secondary', icon: 'plus', onClick: add }, __( 'Add source', 'wp-list-of-sources' ) )
+            );
         },
         save: function() { return null; }
     } );

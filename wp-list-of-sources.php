@@ -2,7 +2,7 @@
 /**
  * Plugin Name: WP List of Sources
  * Description: Automatically extracts and displays links, images, tables, or files from the current post. Add one block per source type.
- * Version: 1.0.2
+ * Version: 1.1.0
  * Author: Stefan Fambach
  * Text Domain: wp-list-of-sources
  * Domain Path: /languages
@@ -195,6 +195,21 @@ function wpls_register_sources_blocks() {
         register_block_style( 'wpls/sources-table', [ 'name' => 'default', 'label' => __( 'Default', 'wp-list-of-sources' ), 'is_default' => true ] );
         register_block_style( 'wpls/sources-table', [ 'name' => 'stripes', 'label' => __( 'Stripes', 'wp-list-of-sources' ) ] );
     }
+
+    register_block_type(
+        'wpls/extra-sources',
+        [
+            'editor_script'   => 'wpls-blocks-js',
+            'render_callback' => '__return_empty_string',
+            'attributes'      => [
+                'links' => [
+                    'type'    => 'array',
+                    'default' => [],
+                    'items'   => [ 'type' => 'object' ],
+                ],
+            ],
+        ]
+    );
 }
 add_action( 'init', 'wpls_register_sources_blocks' );
 
@@ -659,6 +674,46 @@ function wpls_collect_tables_data( DOMDocument $dom ) {
     return $data;
 }
 
+/**
+ * Collects the manually entered links of all "Additional Sources" blocks.
+ * File URLs go to the files list, everything else to the links list.
+ */
+function wpls_collect_extra_sources_data( array $blocks, $as_file, $strip_url_prefix ) {
+    $data = [];
+
+    foreach ( $blocks as $block ) {
+        if ( isset( $block['blockName'] ) && $block['blockName'] === 'wpls/extra-sources' && ! empty( $block['attrs']['links'] ) && is_array( $block['attrs']['links'] ) ) {
+            foreach ( $block['attrs']['links'] as $link ) {
+                $url   = isset( $link['url'] ) ? trim( (string) $link['url'] ) : '';
+                $title = isset( $link['title'] ) ? trim( (string) $link['title'] ) : '';
+
+                if ( $url === '' || wpls_is_file_url( $url ) !== $as_file ) {
+                    continue;
+                }
+
+                $has_real_title = $title !== '';
+                $final_title    = $has_real_title ? $title : wpls_get_clean_domain_and_path( $url );
+                if ( $strip_url_prefix && preg_match( '#^https?://#i', $final_title ) ) {
+                    $final_title = wpls_get_clean_domain_and_path( $final_title );
+                }
+
+                $data[] = [
+                    'url'       => esc_url( $url ),
+                    'title'     => esc_html( $final_title ),
+                    'has_title' => $has_real_title,
+                    'norm_url'  => wpls_normalize_url_for_dedupe( $url ),
+                ];
+            }
+        }
+
+        if ( ! empty( $block['innerBlocks'] ) ) {
+            $data = array_merge( $data, wpls_collect_extra_sources_data( $block['innerBlocks'], $as_file, $strip_url_prefix ) );
+        }
+    }
+
+    return $data;
+}
+
 function wpls_collect_source_data( $source_type, $html, $strip_url_prefix ) {
     switch ( $source_type ) {
         case 'images':
@@ -669,12 +724,20 @@ function wpls_collect_source_data( $source_type, $html, $strip_url_prefix ) {
 
     $buckets   = wpls_split_content_by_block( $html );
     $other_dom = wpls_create_dom_from_html( $buckets['other'] );
+    $as_file   = $source_type === 'files';
 
-    if ( $source_type === 'files' ) {
-        return wpls_collect_files_data( wpls_create_dom_from_html( $buckets['files'] ), $other_dom, $strip_url_prefix );
+    $data = $as_file
+        ? wpls_collect_files_data( wpls_create_dom_from_html( $buckets['files'] ), $other_dom, $strip_url_prefix )
+        : wpls_collect_links_data( $other_dom, $strip_url_prefix );
+
+    if ( has_blocks( $html ) ) {
+        $extra = wpls_collect_extra_sources_data( parse_blocks( $html ), $as_file, $strip_url_prefix );
+        if ( ! empty( $extra ) ) {
+            $data = wpls_finalize_source_list( array_merge( $data, $extra ) );
+        }
     }
 
-    return wpls_collect_links_data( $other_dom, $strip_url_prefix );
+    return $data;
 }
 
 // ---------------------------------------------------------------------------
