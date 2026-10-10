@@ -8,6 +8,10 @@ Pure JavaScript in the editor (no build step, no NPM). Server-side rendering in 
 **Version:** 1.1.0  
 **License:** GPLv2 or later
 
+## AI disclosure
+
+This plugin was built with AI assistance: the code was written largely by Claude (Anthropic) via Claude Code. Stefan Fambach specified, reviewed and tested it.
+
 ## Features
 
 - **One block, one source type** — choose Links, Images, Tables, or Files in the block sidebar
