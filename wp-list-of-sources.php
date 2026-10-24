@@ -2,7 +2,7 @@
 /**
  * Plugin Name: WP List of Sources
  * Description: Automatically extracts and displays links, images, tables, or files from the current post. Add one block per source type.
- * Version: 1.1.0
+ * Version: 1.1.1
  * Author: Stefan Fambach
  * Text Domain: wp-list-of-sources
  * Domain Path: /languages
@@ -773,7 +773,7 @@ function wpls_render_table_source_item( array $item, $index ) {
         $final_anchor = 'wpls-table-' . ( $index + 1 );
     }
 
-    return sprintf( '<a href="#%s">%s</a>', $final_anchor, $item['title'] );
+    return sprintf( '<a href="#%s">%s</a>', esc_attr( $final_anchor ), $item['title'] );
 }
 
 function wpls_render_source_item( $source_type, array $item, $index, $is_editor_preview = false ) {
@@ -896,8 +896,9 @@ function wpls_render_template_dummy_preview( $wrapper_class, $source_type, $styl
 
 function wpls_render_sources_table( $attributes, $content ) {
     $post_id = false;
-    if ( defined( 'REST_REQUEST' ) && REST_REQUEST && ! empty( $_GET['post_id'] ) ) {
-        $post_id = intval( $_GET['post_id'] );
+    // Only the editor preview names another post; anyone else would read a draft's sources through any REST route.
+    if ( defined( 'REST_REQUEST' ) && REST_REQUEST && ! empty( $_GET['post_id'] ) && current_user_can( 'edit_post', absint( $_GET['post_id'] ) ) ) {
+        $post_id = absint( $_GET['post_id'] );
     }
     if ( ! $post_id ) {
         $post_id = get_the_ID();
