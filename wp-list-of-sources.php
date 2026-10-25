@@ -2,7 +2,7 @@
 /**
  * Plugin Name: WP List of Sources
  * Description: Automatically extracts and displays links, images, tables, or files from the current post. Add one block per source type.
- * Version: 1.1.2
+ * Version: 1.1.3
  * Author: Stefan Fambach (SteFam), Claude (Anthropic AI)
  * Text Domain: wp-list-of-sources
  * Domain Path: /languages
@@ -924,7 +924,8 @@ function wpls_render_sources_table( $attributes, $content ) {
         $content_version = '0';
     }
 
-    $cache_key = 'wpls_cache_' . $post_id . '_' . $content_version . '_' . md5( serialize( $attributes ) . serialize( $settings ) );
+    // The plugin file's mtime changes with every update, so a new release never serves markup cached by the old one.
+    $cache_key = 'wpls_cache_' . $post_id . '_' . $content_version . '_' . md5( serialize( $attributes ) . serialize( $settings ) . filemtime( __FILE__ ) );
 
     if ( ! $is_editor_preview ) {
         $cached_output = get_transient( $cache_key );
