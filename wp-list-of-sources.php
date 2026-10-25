@@ -2,7 +2,7 @@
 /**
  * Plugin Name: WP List of Sources
  * Description: Automatically extracts and displays links, images, tables, or files from the current post. Add one block per source type.
- * Version: 1.1.3
+ * Version: 1.1.4
  * Author: Stefan Fambach (SteFam), Claude (Anthropic AI)
  * Text Domain: wp-list-of-sources
  * Domain Path: /languages
@@ -677,6 +677,7 @@ function wpls_collect_tables_data( DOMDocument $dom ) {
 /**
  * Collects the manually entered links of all "Additional Sources" blocks.
  * File URLs go to the files list, everything else to the links list.
+ * $as_file null takes all of them (a post without a files list).
  */
 function wpls_collect_extra_sources_data( array $blocks, $as_file, $strip_url_prefix ) {
     $data = [];
@@ -687,7 +688,7 @@ function wpls_collect_extra_sources_data( array $blocks, $as_file, $strip_url_pr
                 $url   = isset( $link['url'] ) ? trim( (string) $link['url'] ) : '';
                 $title = isset( $link['title'] ) ? trim( (string) $link['title'] ) : '';
 
-                if ( $url === '' || wpls_is_file_url( $url ) !== $as_file ) {
+                if ( $url === '' || ( $as_file !== null && wpls_is_file_url( $url ) !== $as_file ) ) {
                     continue;
                 }
 
@@ -714,6 +715,19 @@ function wpls_collect_extra_sources_data( array $blocks, $as_file, $strip_url_pr
     return $data;
 }
 
+function wpls_has_files_list( array $blocks ) {
+    foreach ( $blocks as $block ) {
+        if ( isset( $block['blockName'] ) && $block['blockName'] === 'wpls/sources-table' && isset( $block['attrs']['sourceType'] ) && $block['attrs']['sourceType'] === 'files' ) {
+            return true;
+        }
+        if ( ! empty( $block['innerBlocks'] ) && wpls_has_files_list( $block['innerBlocks'] ) ) {
+            return true;
+        }
+    }
+
+    return false;
+}
+
 function wpls_collect_source_data( $source_type, $html, $strip_url_prefix ) {
     switch ( $source_type ) {
         case 'images':
@@ -731,7 +745,10 @@ function wpls_collect_source_data( $source_type, $html, $strip_url_prefix ) {
         : wpls_collect_links_data( $other_dom, $strip_url_prefix );
 
     if ( has_blocks( $html ) ) {
-        $extra = wpls_collect_extra_sources_data( parse_blocks( $html ), $as_file, $strip_url_prefix );
+        $blocks = parse_blocks( $html );
+        // Without a files list a file URL entered by hand would be shown nowhere, so the links list takes it.
+        $extra_kind = ( ! $as_file && ! wpls_has_files_list( $blocks ) ) ? null : $as_file;
+        $extra      = wpls_collect_extra_sources_data( $blocks, $extra_kind, $strip_url_prefix );
         if ( ! empty( $extra ) ) {
             $data = wpls_finalize_source_list( array_merge( $data, $extra ) );
         }
