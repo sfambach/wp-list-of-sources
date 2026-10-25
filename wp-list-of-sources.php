@@ -2,7 +2,7 @@
 /**
  * Plugin Name: WP List of Sources
  * Description: Automatically extracts and displays links, images, tables, or files from the current post. Add one block per source type.
- * Version: 1.1.1
+ * Version: 1.1.2
  * Author: Stefan Fambach (SteFam), Claude (Anthropic AI)
  * Text Domain: wp-list-of-sources
  * Domain Path: /languages
@@ -851,7 +851,7 @@ function wpls_render_source_block( $source_type, array $data, $display_format, $
     }
 
     return sprintf(
-        '<div class="%s" style="margin-top: 30px; font-family: sans-serif;">%s</div>',
+        '<div class="%s" style="margin-top: 30px;">%s</div>',
         $wrapper_class_str,
         $content
     );
@@ -866,7 +866,7 @@ function wpls_render_template_dummy_preview( $wrapper_class, $source_type, $styl
     ];
     $items = isset( $samples[ $source_type ] ) ? $samples[ $source_type ] : $samples['links'];
 
-    $output  = '<div class="' . $wrapper_class . '" style="border: 1px dashed #ccc; padding: 15px; background: #fafafa; font-family: sans-serif;">';
+    $output  = '<div class="' . $wrapper_class . '" style="border: 1px dashed #ccc; padding: 15px; background: #fafafa;">';
     $output .= '<span style="display:block; font-size:11px; color:#999; text-transform:uppercase; margin-bottom:10px;">' . esc_html__( 'Live Preview (Template Mode)', 'wp-list-of-sources' ) . '</span>';
 
     if ( $display_format === 'list' ) {
