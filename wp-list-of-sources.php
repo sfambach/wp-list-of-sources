@@ -3,7 +3,7 @@
  * Plugin Name: WP List of Sources
  * Description: Automatically extracts and displays links, images, tables, or files from the current post. Add one block per source type.
  * Version: 1.1.1
- * Author: Stefan Fambach
+ * Author: Stefan Fambach (SteFam), Claude (Anthropic AI)
  * Text Domain: wp-list-of-sources
  * Domain Path: /languages
  * GitHub Plugin URI: sfambach/wp-list-of-sources
